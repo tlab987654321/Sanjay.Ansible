@@ -1,0 +1,78 @@
+---
+- name: Deploy Ansible Dashboard
+  hosts: lab
+  become: yes
+  vars:
+    ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+  tasks:
+    - name: Enable DNF Plugin core
+      package: 
+        name: dnf-plugins-core
+        state: present
+
+    - name: Enable Docker repository
+      command: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      args:
+         creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Ensure Docker is installed
+      package:
+        name: 
+          - docker-ce
+          - docker-ce-cli 
+          - containerd.io 
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - python3-pip
+        state: present
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Python docker module
+      pip:
+       name: 
+         - docker
+         - docker-compose
+       state: present
+
+    - name: "Build InfluxDB and Grafana Container"
+      #environment:
+      #    DOCKER_HOST: "unix:///var/run/docker.sock"
+      community.docker.docker_compose_v2:
+          project_name: dashboard
+          definition:
+            #version: '3'
+            services:
+              InfluxDB:
+                image: influxdb:latest
+                environment:
+                  - DOCKER_INFLUXDB_INIT_MODE=setup
+                  - INFLUXDB_DB=ansible_db
+                  - DOCKER_INFLUXDB_INIT_USERNAME=admin
+                  - DOCKER_INFLUXDB_INIT_PASSWORD=AdminPassw0rd
+                  - INFLUXDB_HTTP_AUTH_ENABLED=true
+                  - DOCKER_INFLUXDB_INIT_ORG=testlab
+                  - DOCKER_INFLUXDB_INIT_BUCKET=ansible
+                  - INFLUXDB_TOKEN=S3CRETT0KENFORMY1NFLUXDB
+                volumes:
+                  - "influxdb-data:/var/lib/influxdb2"
+                ports:
+                  - "8086:8086"
+              Grafana:
+                image: grafana/grafana:latest
+                environment:
+                    - GF_SECURITY_ADMIN_USER=admin
+                    - GF_SECURITY_ADMIN_PASSWORD=adminpassword
+                volumes:
+                  - "grafana-data:/var/lib/grafana"
+                ports:
+                  - "3000:3000"
+                depends_on:
+                  - InfluxDB
+            volumes:
+              influxdb-data:
+              grafana-data:

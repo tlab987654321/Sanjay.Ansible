@@ -1,0 +1,136 @@
+import json
+import requests
+import time
+from ansible.plugins.callback import CallbackBase
+
+# Configuration - Set your InfluxDB details here
+INFLUXDB_URL = "http://{{influxdb_srv}}:8086"
+INFLUXDB_TOKEN = "{{token}}"
+INFLUXDB_ORG = "testlab"
+INFLUXDB_BUCKET = "ansible"
+INFLUXDB_PRECISION = "s"  # Can be ns, us, ms, or s for seconds
+
+class CallbackModule(CallbackBase):
+    """
+    Ansible callback plugin to send logs to InfluxDB.
+    """
+
+    CALLBACK_VERSION = 2.0
+    CALLBACK_TYPE = 'notification'
+    CALLBACK_NAME = 'influxdb_logger'
+    CALLBACK_NEEDS_WHITELIST = False
+
+    def __init__(self):
+        super(CallbackModule, self).__init__()
+        self.start_time = time.time()
+        self.task_start_time = None
+        self.playbook_name = "unknown_playbook"
+
+    def send_to_influxdb(self, measurement, tags, fields):
+        """
+        Sends formatted data to InfluxDB.
+        """
+        try:
+            tags_str = ",".join([f"{k}={v}" for k, v in tags.items()])
+            fields_str = ",".join([f"{k}={v}" if isinstance(v, (int, float)) else f'{k}="{v}"' for k, v in fields.items()])
+            line_protocol = f"{measurement},{tags_str} {fields_str}"
+
+            headers = {
+                "Authorization": f"Token {INFLUXDB_TOKEN}",
+                "Content-Type": "text/plain; charset=utf-8"
+            }
+            influxdb_write_url = f"{INFLUXDB_URL}/api/v2/write?org={INFLUXDB_ORG}&bucket={INFLUXDB_BUCKET}&precision={INFLUXDB_PRECISION}"
+
+            response = requests.post(influxdb_write_url, headers=headers, data=line_protocol)
+            if response.status_code != 204:
+                self._display.warning(f"Failed to send data to InfluxDB: {response.text}")
+        
+        except Exception as e:
+            self._display.warning(f"Error sending data to InfluxDB: {str(e)}")
+
+    def v2_runner_on_start(self, host, task):
+        """
+        Capture task start event.
+        """
+        self.task_start_time = time.time()
+
+    def v2_runner_on_ok(self, result):
+        """
+        Capture task success event.
+        """
+        task_name = result.task_name or "Unnamed Task"
+        host = result._host.get_name()
+        duration = time.time() - (self.task_start_time or self.start_time)
+
+        tags = {
+            "job_id": result._task._uuid,
+            "playbook": self.playbook_name,
+            "task": task_name.replace(" ", "_"),
+            "host": host,
+            "status": "success"
+        }
+
+        fields = {"duration": round(duration, 6)}
+
+        self.send_to_influxdb("ansible_logs", tags, fields)
+
+    def v2_runner_on_failed(self, result, ignore=False):
+        """
+        Capture task failure event.
+        """
+        task_name = result.task_name or "Unnamed Task"
+        host = result._host.get_name()
+        duration = time.time() - (self.task_start_time or self.start_time)
+        error_msg = str(result._result.get('msg', 'Unknown Error'))
+
+        tags = {
+            "job_id": result._task._uuid,
+            "playbook": self.playbook_name,
+            "task": task_name.replace(" ", "_"),
+            "host": host,
+            "status": "failed"
+        }
+
+        fields = {
+            "duration": round(duration, 6),
+            "error_msg": f'"{error_msg}"'
+        }
+
+        self.send_to_influxdb("ansible_logs", tags, fields)
+
+    def v2_playbook_on_start(self, playbook):
+        """
+        Capture playbook start event.
+        """
+        self.playbook_name = playbook._file_name
+
+    def v2_playbook_on_stats(self, stats):
+       """
+       Capture playbook completion and summarize results.
+       """
+       duration = time.time() - self.start_time
+
+       # Correct way to call summarize()
+       try:
+           host_summaries = stats.summarize()  # Ensure it's being called correctly
+       except TypeError:  
+           # For older Ansible versions, try fetching hosts individually
+           host_summaries = {host: stats.summarize(host) for host in stats.processed}
+
+       for host, summary in host_summaries.items():
+           tags = {
+               "playbook": self.playbook_name,
+               "host": host,
+               "status": "completed"
+           }
+   
+           fields = {
+               "ok": summary.get("ok", 0),
+               "changed": summary.get("changed", 0),
+               "failed": summary.get("failures", 0),
+               "skipped": summary.get("skipped", 0),
+               "unreachable": summary.get("unreachable", 0),
+               "duration": round(duration, 6)
+           }
+
+           self.send_to_influxdb("ansible_summary", tags, fields)

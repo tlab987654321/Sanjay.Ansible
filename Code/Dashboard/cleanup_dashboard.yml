@@ -1,0 +1,16 @@
+---
+  - name: Cleanup Dashboard Setup
+    hosts: lab
+    become: yes
+    vars:
+      ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    tasks:
+      - name: Delete the Containers and Resources built on Docker for Dashboard
+        community.docker.docker_compose_v2:
+          project_name: dashboard
+          definition:
+            version: '3'
+          state: absent
+          remove_volumes: yes
+          remove_images: all
+
