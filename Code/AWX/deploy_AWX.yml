@@ -1,0 +1,129 @@
+---
+- name: Deploy AWX Server
+  hosts: lab
+  become: yes
+  vars:
+    ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+  tasks:
+    - name: Enable DNF Plugin core
+      package:
+        name: dnf-plugins-core
+        state: present
+
+    - name: Enable Docker repository
+      command: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      args:
+         creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Install prerequisites required for AWX
+      package: 
+        name: 
+          - docker-ce
+          - ca-certificates
+          - curl
+          - gnupg
+          - docker-ce-cli 
+          - containerd.io 
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - python3-pip
+          - git
+        state: present
+    
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Python docker module
+      pip:
+       name:
+         - docker
+         - docker-compose
+         - kubernetes
+         - pyyaml
+         - openshift
+       state: present
+
+         #    - name: Create a keyrings directory
+         #      file: 
+         #        path: /etc/docker/keyrings
+         #        mode: '0755'
+         #        state: directory
+
+          #    - name: Download the keyring gpg key
+          #      shell: |
+          #        - curl -fsSL https://download.docker.com/linux/rhel/gpg | gpg -dearmor -o /etc/docker/keyrings/docker.gpg
+          #        - chmod a+r /etc/docker/keyrings/docker.gpg
+
+    - name: Install MiniKube 
+      ansible.builtin.get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: /usr/bin/minikube
+        mode: 0755
+
+    - name: Chech minikube status
+      command: minikube status --output=json
+      register: minikube_status_json
+      changed_when: false
+      ignore_errors: true
+
+    - name: Start the minikube cluster if not running
+      shell: minikube start --addons=ingress --force
+      when: >
+        (minikube_status_json.stdout | from_json).Host != "Running" or
+        (minikube_status_json.stdout | from_json).Kubelet != "Running" or
+        (minikube_status_json.stdout | from_json).APIServer != "Running"
+  
+    - name: Create awx directory
+      file:
+        name: ~/awx
+        state: directory  
+
+    - name: Create AWX namespace
+      kubernetes.core.k8s:
+        name: awx
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Create kustomization.yaml for AWX Operator
+      copy:
+        dest: "~/awx/kustomization.yaml"
+        content: |
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          resources:
+            - github.com/ansible/awx-operator/config/default?ref=2.5.3
+          images:
+            - name: quay.io/ansible/awx-operator
+              newTag: 2.5.3
+          namespace: awx
+
+    - name: Apply Kustomization to deploy AWX Operator
+      command: minikube kubectl -- apply -k ~/awx
+
+    - name: Open port for accessing the AWX from internet
+      shell: minikube kubectl -- port-forwarding svc/awx-service --address 0.0.0.0 8080:80 &> /dev/null &
+      register: AWX_URL
+
+    - name: Open port for accessing the AWX from internet
+      shell: |
+          nohup minikube kubectl -- port-forward svc/awx-service --address 0.0.0.0 8080:80 > /tmp/awx_port_forward.log 2>&1 &
+      async: 10
+      poll: 0
+
+    - name: Wait for AWX service to be accessible
+      pause:
+        seconds: 5
+
+    - name: Get Minikube IP
+      command: minikube ip
+      register: minikube_ip
+      changed_when: false
+
+    - name: Display AWX URL
+      debug:
+        msg: "AWX is accessible at http://{{ minikube_ip.stdout }}:8080"
+
