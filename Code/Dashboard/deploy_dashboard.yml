@@ -4,8 +4,8 @@
   become: yes
   vars:
     ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-    INFLUXDB_SERVER: 172.31.35.116  #"{{ inventory_hostname }}"
-    GRAFANA_SERVER: 172.31.35.116   #"{{ inventory_hostname }}"
+    INFLUXDB_SERVER: "{{ ansible_default_ipv4.address }}"  #"{{ inventory_hostname }}"
+    GRAFANA_SERVER: "{{ ansible_default_ipv4.address }}"  #"{{ inventory_hostname }}"
     INFLUXDB_DB_NAME: "ansible_logs"
     INFLUXDB_ORGANIZATION: "testlab"
     INFLUXDB_BUCKET: "ansible"
@@ -91,6 +91,7 @@
     - name: Wait for the containers to spin up to proceed to further configurations
       pause: 
         seconds: 60
+
     - name: "Get InfluxDB token"
       community.docker.docker_container_exec:
         container: dashboard-InfluxDB-01
@@ -122,3 +123,42 @@
           tlsSkipVerify: true
         additional_secure_json_data:
           token: "{{ INFLUXDB_TOKEN }}"
+
+    - name: Create directory structure for configuring logger
+      delegate_to: localhost
+      become: no
+      file:
+        path: ~/.ansible/plugins/callback
+        state: directory
+        recurse: yes
+
+    - name: Create influxdb_logger configuration on Ansible server
+      delegate_to: localhost
+      become: no
+      ansible.builtin.template:
+        src: templates/influxdb_logger.j2
+        dest: ~/.ansible/plugins/callback/influxdb_logger.py
+      
+    - name: Find the active ansible.cfg path
+      delegate_to: localhost
+      become: no
+      command: ansible-config dump --only-changed
+      register: ansible_config_output
+      changed_when: false
+
+    - name: Extract ansible.cfg path
+      set_fact:
+        ansible_config: "{{ ansible_config_output.stdout_lines | select('search', 'CONFIG_FILE') | first | split(': ') | last }}"
+
+    - name: Update ansible.cfg file to enable logger
+      delegate_to: localhost
+      become: no
+      lineinfile:
+        path: "{{ ansible_config }}"
+        insertafter: "[defaults]"
+        line: "{{ item }}"
+      loop:   
+        - "callback_whitelist = influxdb_logger"
+        - "callback_plugins = ~/.ansible/plugins/callback"
+
+
