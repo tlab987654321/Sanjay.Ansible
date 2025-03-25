@@ -19,6 +19,7 @@
         lineinfile:
           path: "{{ ansible_config }}"
           line: "{{ item }}"
+          state: absent
         loop:
           - "callback_whitelist = influxdb_logger"
           - "callback_plugins = ~/.ansible/plugins/callback"
