@@ -4,10 +4,10 @@ import time
 from ansible.plugins.callback import CallbackBase
 
 # Configuration - Set your InfluxDB details here
-INFLUXDB_URL = "http://{{influxdb_srv}}:8086"
-INFLUXDB_TOKEN = "{{token}}"
-INFLUXDB_ORG = "testlab"
-INFLUXDB_BUCKET = "ansible"
+INFLUXDB_URL = "http://{{ INFLUXDB_SERVER }}:8086"
+INFLUXDB_TOKEN = "{{ INFLUXDB_TOKEN }}"
+INFLUXDB_ORG = "{{ INFLUXDB_ORGANIZATION }}"
+INFLUXDB_BUCKET = "{{ INFLUXDB_BUCKET }}"
 INFLUXDB_PRECISION = "s"  # Can be ns, us, ms, or s for seconds
 
 class CallbackModule(CallbackBase):

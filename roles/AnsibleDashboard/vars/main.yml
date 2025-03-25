@@ -1,2 +1,13 @@
 ---
 # vars file for AnsibleDashboard
+#INFLUXDB_SERVER: "{{ ansible_default_ipv4.address }}"  #"{{ inventory_hostname }}"
+#GRAFANA_SERVER: "{{ ansible_default_ipv4.address }}"  #"{{ inventory_hostname }}"
+INFLUXDB_SERVER: "172.31.35.116"
+GRAFANA_SERVER: "172.31.35.116" 
+INFLUXDB_DB_NAME: "ansible_logs"
+INFLUXDB_ORGANIZATION: "testlab"
+INFLUXDB_BUCKET: "ansible"
+INFLUXDB_USER: "admin"
+INFLUXDB_PASSWORD: "Adm1nP@ssw0rd"
+GRAFANA_USER: "admin"
+GRAFANA_PASSWORD: "admin"

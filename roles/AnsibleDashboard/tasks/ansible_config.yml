@@ -1,0 +1,41 @@
+---
+# tasks file for Configuring ansible to send logs to InfluxDB
+    - name: Create directory structure for configuring logger
+      file:
+        path: ~/.ansible/plugins/callback
+        state: directory
+        recurse: yes
+
+    - name: Read token from file
+      slurp:
+        src: ~/.influxdb_token
+      register: INFLUXDB_TOKEN
+
+    - name: Create influxdb_logger configuration on Ansible server
+      ansible.builtin.template:
+        src: templates/influxdb_logger.j2
+        dest: ~/.ansible/plugins/callback/influxdb_logger.py
+
+    - name: Find the active ansible.cfg path
+      command: ansible-config dump --only-changed
+      register: ansible_config_output
+      changed_when: false
+
+    - name: Extract ansible.cfg path
+      set_fact:
+        ansible_config: "{{ ansible_config_output.stdout_lines | select('search', 'CONFIG_FILE') | first | split('= ') | last | trim }}"
+
+    - name: Cleanup token file
+      file: 
+        path: ~/.influxdb_token
+        state: absent
+
+    - name: Update ansible.cfg file to enable logger
+      lineinfile:
+        path: "{{ ansible_config }}"
+        insertafter: "[defaults]"
+        line: "{{ item }}"
+      loop:
+        - "callback_whitelist = influxdb_logger"
+        - "callback_plugins = ~/.ansible/plugins/callback"
+

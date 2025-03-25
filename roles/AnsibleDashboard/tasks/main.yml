@@ -1,2 +1,13 @@
 ---
-# tasks file for AnsibleDashboard
+# tasks file for Deploying Ansible Dashboard setup and Configure the localhost
+- name: Building and Configuring InfluxDB and Garfana Containers
+  #hosts: lab
+  #become: true
+  when: inventory_hostname != 'localhost'
+  include_tasks: docker_deploy.yml
+
+- name: Configuring the Ansible to Send logs to InfluxDB
+  #hosts: localhost
+  when: inventory_hostname == 'localhost'
+  include_tasks: ansible_config.yml
+

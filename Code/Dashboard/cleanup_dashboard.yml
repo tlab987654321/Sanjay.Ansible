@@ -1,10 +1,36 @@
 ---
   - name: Cleanup Dashboard Setup
     hosts: lab
-    become: yes
+    become: no
     vars:
       ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
     tasks:
+      - name: Find the active ansible.cfg path
+        command: ansible-config dump --only-changed
+        register: ansible_config_output
+        changed_when: false
+        delegate_to: localhost
+
+      - name: Extract ansible.cfg path
+        set_fact:
+          ansible_config: "{{ ansible_config_output.stdout_lines | select('search', 'CONFIG_FILE') | first | split('= ') | last | trim }}"
+
+      - name: Remove the entry from ansible configuration file
+        lineinfile:
+          path: "{{ ansible_config }}"
+          line: "{{ item }}"
+        loop:
+          - "callback_whitelist = influxdb_logger"
+          - "callback_plugins = ~/.ansible/plugins/callback"
+        delegate_to: localhost
+        become: no
+
+      - name: Cleanup the influxdb_caller configuration file
+        file: 
+          path: ~/.ansible/plugins/callback/influxdb_logger.py
+          state: absent
+        delegate_to: localhost
+
       - name: Delete the Containers and Resources built on Docker for Dashboard
         community.docker.docker_compose_v2:
           project_name: dashboard
@@ -13,4 +39,3 @@
           state: absent
           remove_volumes: yes
           remove_images: all
-

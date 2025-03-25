@@ -1,0 +1,5 @@
+---
+- name: Deploy Ansible Dashboard
+  hosts: all
+  roles: 
+    - AnsibleDashboard
