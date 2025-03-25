@@ -1,0 +1,20 @@
+    - name: "Build InfluxDB and Grafana Container"
+      community.docker.docker_compose_v2:
+          project_name: dashboard
+          definition:
+            #version: '3'
+            services:
+              Grafana:
+                container_name: dashboard-Grafana-01
+                image: grafana/grafana:latest
+                environment:
+                    - "GF_SECURITY_ADMIN_USER={{ GRAFANA_USER }}"
+                    - "GF_SECURITY_ADMIN_PASSWORD={{ GRAFANA_PASSWORD }}"
+                volumes:
+                  - "grafana-data:/var/lib/grafana"
+                ports:
+                  - "3000:3000"
+                depends_on:
+                  - InfluxDB
+            volumes:
+              grafana-data:
