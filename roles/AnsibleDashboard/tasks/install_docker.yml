@@ -37,3 +37,10 @@
          - docker
          - docker-compose
        state: present
+
+    - name: Add user to docker gorup
+      become: true
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes

@@ -1,4 +1,4 @@
-    - name: "Build InfluxDB and Grafana Container"
+    - name: "Build Grafana Container"
       community.docker.docker_compose_v2:
           project_name: dashboard
           definition:
@@ -14,7 +14,39 @@
                   - "grafana-data:/var/lib/grafana"
                 ports:
                   - "3000:3000"
-                depends_on:
-                  - InfluxDB
             volumes:
               grafana-data:
+      notify: "Wait for Containers"
+
+    - name: "Run handler if Grafana Container is building"
+      meta: flush_handlers
+
+    - name: Create influxdbv2 datasource using FLUX in Grafana
+      community.grafana.grafana_datasource:
+        name: "datasource-influxdb-flux"
+        grafana_url: "http://{{ GRAFANA_SERVER }}:3000"
+        grafana_user: "{{ GRAFANA_USER }}"
+        grafana_password: "{{ GRAFANA_PASSWORD }}"
+        org_id: "1"
+        ds_type: "influxdb"
+        ds_url: "http://{{ INFLUXDB_SERVER }}:8086"
+        additional_json_data:
+          version: "Flux"
+          organization: "{{ INFLUXDB_ORGANIZATION }}"
+          defaultBucket: "{{ INFLUXDB_BUCKET }}"
+          tlsSkipVerify: true
+        additional_secure_json_data:
+          token: "{{ INFLUXDB_TOKEN }}"
+
+    - name: Create Prometheus datasource in Grafana
+      community.grafana.grafana_datasource:
+        name: "Prometheus"
+        grafana_url: "http://{{ GRAFANA_SERVER }}:3000"
+        grafana_user: "{{ GRAFANA_USER }}"
+        grafana_password: "{{ GRAFANA_PASSWORD }}"
+        org_id: "1"
+        ds_type: "prometheus"
+        ds_url: "http://{{ PROMETHEUS_SERVER }}:9090"
+        access: "proxy"
+        additional_json_data:
+          tlsSkipVerify: true

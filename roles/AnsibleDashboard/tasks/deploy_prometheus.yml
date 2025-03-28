@@ -1,0 +1,56 @@
+    - name: Ensure required apache2-utils package is installed
+      become: true
+      package:
+        name: 
+          - httpd-tools
+
+    - name: Create Directory structure for Docker
+      become: yes
+      file:
+        path: "/Docker/prometheus"
+        mode: '0755'
+        owner: "{{ ansible_user }}" 
+        state: directory
+
+    - name: Generate Prometheus authentication file
+      command: "htpasswd -bc /Docker/prometheus/.htpasswd {{ PROMETHEUS_USER }} {{ PROMETHEUS_PASSWORD }}"
+      args:
+        creates: /Docker/prometheus/.htpasswd
+
+    - name: Create Prometheus config file
+      copy:
+        dest: "/Docker/prometheus/prometheus.yml"
+        content: |
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'prometheus'
+              basic_auth:
+                username: "{{ PROMETHEUS_USER }}"
+                password: "{{ PROMETHEUS_PASSWORD }}"
+              static_configs:
+                - targets: ['localhost:9090']
+
+    - name: "Build Prometheus Container"
+      community.docker.docker_compose_v2:
+          project_name: dashboard
+          definition:
+            services:
+              Prometheus :
+                container_name: dashboard-Prometheus-01
+                image: prom/prometheus:latest
+                volumes:
+                  - "/Docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+                  - "/Docker/prometheus/.htpasswd:/etc/prometheus/.htpasswd"
+                  - "/Docker/prometheus/web.yml:/etc/prometheus/web.yml"
+                ports:
+                  - "9090:9090"
+                command:
+                  - "--config.file=/etc/prometheus/prometheus.yml"
+                  - "--web.config.file=/etc/prometheus/.htpasswd"
+      notify: "Wait for Containers"
+
+    - name: "Run handler if InfluxDB Container is building"
+      meta: flush_handlers
+

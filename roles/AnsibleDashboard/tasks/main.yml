@@ -1,13 +1,22 @@
 ---
 # tasks file for Deploying Ansible Dashboard setup and Configure the localhost
-- name: Building and Configuring InfluxDB and Garfana Containers
-  #hosts: lab
-  #become: true
+- name: Install Docker on the server
   when: inventory_hostname != 'localhost'
-  include_tasks: docker_deploy.yml
+  include_tasks: install_docker.yml
+
+- name: Building and Configuring InfluxDB on Docker Container
+  when: inventory_hostname != 'localhost'
+  include_tasks: deploy_influxdb.yml
+
+- name: Building and Configuring Prometheus on Docker Container
+  when: inventory_hostname != 'localhost'
+  include_tasks: deploy_prometheus.yml
+
+- name: Building and Configuring Grafana on Docker Container
+  when: inventory_hostname != 'localhost'
+  include_tasks: deploy_grafana.yml
 
 - name: Configuring the Ansible to Send logs to InfluxDB
-  #hosts: localhost
   when: inventory_hostname == 'localhost'
   include_tasks: ansible_config.yml
 
