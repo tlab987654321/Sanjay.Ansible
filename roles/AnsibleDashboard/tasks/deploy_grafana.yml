@@ -48,5 +48,7 @@
         ds_type: "prometheus"
         ds_url: "http://{{ PROMETHEUS_SERVER }}:9090"
         access: "proxy"
+        basic_auth_user: "{{ PROMETHEUS_USER }}"
+        basic_auth_password: "{{ PROMETHEUS_PASSWORD }}"
         additional_json_data:
           tlsSkipVerify: true

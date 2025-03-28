@@ -13,7 +13,7 @@
         state: directory
 
     - name: Generate Prometheus authentication file
-      command: "htpasswd -bc /Docker/prometheus/.htpasswd {{ PROMETHEUS_USER }} {{ PROMETHEUS_PASSWORD }}"
+      command: "htpasswd -B -bc /Docker/prometheus/.htpasswd {{ PROMETHEUS_USER }} {{ PROMETHEUS_PASSWORD }}"
       args:
         creates: /Docker/prometheus/.htpasswd
 
@@ -31,6 +31,16 @@
                 password: "{{ PROMETHEUS_PASSWORD }}"
               static_configs:
                 - targets: ['localhost:9090']
+            - job_name: 'ansible_logs'
+              metrics_path: '/metrics'
+              static_configs:
+                - targets: ['{{ INFLUXDB_SERVER }}:8086']
+
+    - name: Create web config file
+      shell: |
+        echo "basic_auth_users:" > /Docker/prometheus/web.yml
+        awk -F ':' '{print "  "$1": \""$2"\""}' /Docker/prometheus/.htpasswd >> /Docker/prometheus/web.yml
+
 
     - name: "Build Prometheus Container"
       community.docker.docker_compose_v2:
@@ -48,7 +58,7 @@
                   - "9090:9090"
                 command:
                   - "--config.file=/etc/prometheus/prometheus.yml"
-                  - "--web.config.file=/etc/prometheus/.htpasswd"
+                  - "--web.config.file=/etc/prometheus/web.yml"
       notify: "Wait for Containers"
 
     - name: "Run handler if InfluxDB Container is building"
