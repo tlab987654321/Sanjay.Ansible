@@ -1,0 +1,19 @@
+- name: Clone the VirtualBox VM
+  command: "/usr/bin/virtualboxvm clonevm '{{ template_name }}' --name='{{ server_name }}' --register"
+  register: clone_result
+  changed_when: "'successfully cloned' in clone_result.stdout"
+  failed_when: "'successfully cloned' not in clone_result.stdout"
+
+- name: Start the cloned VM
+  command: "/usr/bin/virtualboxvm startvm '{{ server_name }}' --type headless"
+  register: start_result
+  changed_when: "'VM started' in start_result.stdout"
+  failed_when: "'VM started' not in start_result.stdout"
+
+- name: Wait for the VM to become responsive (Linux)
+  when: vm_os_type == 'linux'
+  wait_for_connection:
+    host: "{{ new_ip }}"
+    port: 22
+    delay: 10
+    timeout: 300

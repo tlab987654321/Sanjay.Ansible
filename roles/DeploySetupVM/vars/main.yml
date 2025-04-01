@@ -1,0 +1,11 @@
+---
+# vars file for DeploySetupVM
+server_name: "lab-docker01"  # Replace with the name of your source VM
+
+new_ip: "192.168.56.110" # Replace with the desired IP address
+new_hostname: "cloned-host" # Replace with the desired hostname
+network_interface: "enp0s3" # Replace with the network interface name inside the VM (e.g., eth0, ens33, etc.)
+netmask: "255.255.255.0" # Replace with your netmask
+gateway: "192.168.56.1" # Replace with your gateway
+dns_nameservers: "8.8.8.8,8.8.4.4" # Replace with your DNS servers
+vm_os_type: "linux"
