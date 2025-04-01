@@ -1,0 +1,177 @@
+---
+- hosts: influxdb_elk_servers
+  become: true
+  vars:
+    influxdb_version: #"2.7.9" #"1.8.10" # or latest 2.x
+    elasticsearch_version: "7.17.17" # or latest 8.x
+    kibana_version: "7.17.17" # or matching elasticsearch version
+    logstash_version: "7.17.17" # or matching elasticsearch version
+    influxdb_data_dir: "/var/lib/influxdb"
+    influxdb_config_file: "/etc/influxdb/influxdb.conf"
+    elasticsearch_data_dir: "/var/lib/elasticsearch"
+    elasticsearch_config_file: "/etc/elasticsearch/elasticsearch.yml"
+    kibana_config_file: "/etc/kibana/kibana.yml"
+    logstash_config_file: "/etc/logstash/logstash.yml"
+  tasks:
+    - name: Update apt cache (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update yum cache (RedHat/CentOS)
+      yum:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install InfluxDB dependencies (Debian/Ubuntu)
+      apt:
+        name: apt-transport-https
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install InfluxDB dependencies (RedHat/CentOS)
+      yum:
+        name: epel-release
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Add InfluxDB repository key (Debian/Ubuntu)
+      apt_key:
+        url: https://repos.influxdata.com/influxdb.key
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add InfluxDB repository (Debian/Ubuntu)
+      apt_repository:
+        repo: deb https://repos.influxdata.com/debian stable main
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add InfluxDB repository (RedHat/CentOS)
+      copy:
+        src: repo/influxdb.repo
+        dest: /etc/yum.repos.d/influxdb.repo
+      when: ansible_os_family == "RedHat"
+
+    - name: Install InfluxDB
+      package:
+        name: influxdb #={{ influxdb_version }}
+        state: present
+
+    - name: Create InfluxDB data directory
+      file:
+        path: "{{ influxdb_data_dir }}"
+        state: directory
+        owner: influxdb
+        group: influxdb
+        mode: "0755"
+
+    - name: Configure InfluxDB
+      template:
+        src: influxdb.conf.j2
+        dest: "{{ influxdb_config_file }}"
+      notify: restart influxdb
+
+    - name: Start InfluxDB service
+      service:
+        name: influxdb
+        state: started
+        enabled: yes
+
+    - name: Add Elasticsearch repository key
+      apt_key:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Elasticsearch repository (Debian/Ubuntu)
+      apt_repository:
+        repo: deb https://artifacts.elastic.co/packages/7.x/apt stable main
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Elasticsearch repository (RedHat/CentOS)
+      copy:
+        src: repo/elasticsearch.repo
+        dest: /etc/yum.repos.d/elasticsearch.repo
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Elasticsearch
+      package:
+        name: elasticsearch #={{ elasticsearch_version }}
+        state: present
+
+    - name: Create Elasticsearch data directory
+      file:
+        path: "{{ elasticsearch_data_dir }}"
+        state: directory
+        owner: elasticsearch
+        group: elasticsearch
+        mode: "0755"
+
+    - name: Configure Elasticsearch
+      template:
+        src: elasticsearch.yml.j2
+        dest: "{{ elasticsearch_config_file }}"
+      notify: restart elasticsearch
+
+    - name: Start Elasticsearch service
+      service:
+        name: elasticsearch
+        state: started
+        enabled: yes
+
+    - name: Install Kibana
+      package:
+        name: kibana #={{ kibana_version }}
+        state: present
+
+    - name: Configure Kibana
+      template:
+        src: kibana.yml.j2
+        dest: "{{ kibana_config_file }}"
+      notify: restart kibana
+
+    - name: Start Kibana service
+      service:
+        name: kibana
+        state: started
+        enabled: yes
+
+    - name: Install Logstash
+      package:
+        name: logstash #={{ logstash_version }}
+        state: present
+
+    - name: Configure Logstash
+      template:
+        src: logstash.yml.j2
+        dest: "{{ logstash_config_file }}"
+      notify: restart logstash
+
+    - name: Start Logstash service
+      service:
+        name: logstash
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: restart influxdb
+      service:
+        name: influxdb
+        state: restarted
+
+    - name: restart elasticsearch
+      service:
+        name: elasticsearch
+        state: restarted
+
+    - name: restart kibana
+      service:
+        name: kibana
+        state: restarted
+
+    - name: restart logstash
+      service:
+        name: logstash
+        state: restarted

@@ -1,0 +1,6 @@
+---
+- name: Deploy Kubernetes Cluster
+  hosts: kubeservers
+  become: yes
+  roles:
+    - KubeCluster

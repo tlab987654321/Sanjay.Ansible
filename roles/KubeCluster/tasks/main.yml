@@ -1,0 +1,16 @@
+---
+# tasks file for KubeCluster
+- name: Install Required Packages and Initial Configurations
+  include_tasks: Kube_Setup.yml
+
+- name: Setup Kubernetes Master Node
+  when: inventory_hostname == "master1"
+  include_tasks: Master_Setup.yml
+
+- name: Setup Kubernetes Secondary Master Nodes
+  when: inventory_hostname != "master1" and "kubemaster" in group_names
+  include_tasks: SecondaryMaster_Join.yml
+
+- name: Setup Kubernetes Worker Nodes
+  when: '"kubeworker" in group_names'
+  include_tasks: Worker_Join.yml

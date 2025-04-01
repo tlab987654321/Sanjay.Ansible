@@ -1,0 +1,164 @@
+---
+- name: Deploy Ansible Dashboard
+  hosts: lab
+  become: yes
+  vars:
+    ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    INFLUXDB_SERVER: "{{ ansible_default_ipv4.address }}"  #"{{ inventory_hostname }}"
+    GRAFANA_SERVER: "{{ ansible_default_ipv4.address }}"  #"{{ inventory_hostname }}"
+    INFLUXDB_DB_NAME: "ansible_logs"
+    INFLUXDB_ORGANIZATION: "testlab"
+    INFLUXDB_BUCKET: "ansible"
+    INFLUXDB_USER: "admin"
+    INFLUXDB_PASSWORD: "admin"
+    GRAFANA_USER: "admin"
+    GRAFANA_PASSWORD: "admin"
+  tasks:
+    - name: Enable DNF Plugin core
+      package: 
+        name: dnf-plugins-core
+        state: present
+
+    - name: Enable Docker repository
+      command: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      args:
+         creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Ensure Docker is installed
+      package:
+        name: 
+          - docker-ce
+          - docker-ce-cli 
+          - containerd.io 
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - python3-pip
+        state: present
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Python docker module
+      pip:
+       name: 
+         - docker
+         - docker-compose
+       state: present
+
+    - name: "Build InfluxDB and Grafana Container"
+      #environment:
+      #    DOCKER_HOST: "unix:///var/run/docker.sock"
+      community.docker.docker_compose_v2:
+          project_name: dashboard
+          definition:
+            #version: '3'
+            services:
+              InfluxDB:
+                container_name: dashboard-InfluxDB-01
+                image: influxdb:latest
+                environment:
+                  - DOCKER_INFLUXDB_INIT_MODE=setup
+                  - "INFLUXDB_DB={{ INFLUXDB_DB_NAME }}"
+                  - "DOCKER_INFLUXDB_INIT_USERNAME={{ INFLUXDB_USER }}"
+                  - "DOCKER_INFLUXDB_INIT_PASSWORD={{ INFLUXDB_PASSWORD }}"
+                  - INFLUXDB_HTTP_AUTH_ENABLED=true
+                  - "DOCKER_INFLUXDB_INIT_ORG={{ INFLUXDB_ORGANIZATION }}"
+                  - "DOCKER_INFLUXDB_INIT_BUCKET={{ INFLUXDB_BUCKET }}"
+                    #- DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=S3CRETT0KENFORMY1NFLUXDB
+                volumes:
+                  - "influxdb-data:/var/lib/influxdb2"
+                ports:
+                  - "8086:8086"
+              Grafana:
+                container_name: dashboard-Grafana-01
+                image: grafana/grafana:latest
+                environment:
+                    - "GF_SECURITY_ADMIN_USER={{ GRAFANA_USER }}"
+                    - "GF_SECURITY_ADMIN_PASSWORD={{ GRAFANA_PASSWORD }}"
+                volumes:
+                  - "grafana-data:/var/lib/grafana"
+                ports:
+                  - "3000:3000"
+                depends_on:
+                  - InfluxDB
+            volumes:
+              influxdb-data:
+              grafana-data:
+
+    - name: Wait for the containers to spin up to proceed to further configurations
+      pause: 
+        seconds: 60
+
+    - name: "Get InfluxDB token"
+      community.docker.docker_container_exec:
+        container: dashboard-InfluxDB-01
+        command: /bin/bash -c "cat /etc/influxdb2/influx-configs | grep token | grep -v '#'"
+        chdir: /root
+      register: admintoken
+
+    - name: "Set extracted token as a fact"
+      set_fact:
+        INFLUXDB_TOKEN: "{{ admintoken.stdout | regex_replace('.*\"(.*?)\"', '\\1') }}"
+    
+          #- name: "Print InfluxDB admin Token"
+          #debug: 
+          #msg: "The token is {{ INFLUXDB_TOKEN }}"
+
+    - name: Create influxdbv2 datasource using FLUX in Grafana
+      community.grafana.grafana_datasource:
+        name: "datasource-influxdb-flux"
+        grafana_url: "http://{{ GRAFANA_SERVER }}:3000"
+        grafana_user: "{{ GRAFANA_USER }}"
+        grafana_password: "{{ GRAFANA_PASSWORD }}"
+        org_id: "1"
+        ds_type: "influxdb"
+        ds_url: "http://{{ INFLUXDB_SERVER }}:8086"
+        additional_json_data:
+          version: "Flux"
+          organization: "{{ INFLUXDB_ORGANIZATION }}"
+          defaultBucket: "{{ INFLUXDB_BUCKET }}"
+          tlsSkipVerify: true
+        additional_secure_json_data:
+          token: "{{ INFLUXDB_TOKEN }}"
+
+    - name: Create directory structure for configuring logger
+      delegate_to: localhost
+      become: no
+      file:
+        path: ~/.ansible/plugins/callback
+        state: directory
+        recurse: yes
+
+    - name: Create influxdb_logger configuration on Ansible server
+      delegate_to: localhost
+      become: no
+      ansible.builtin.template:
+        src: templates/influxdb_logger.j2
+        dest: ~/.ansible/plugins/callback/influxdb_logger.py
+      
+    - name: Find the active ansible.cfg path
+      delegate_to: localhost
+      become: no
+      command: ansible-config dump --only-changed
+      register: ansible_config_output
+      changed_when: false
+
+    - name: Extract ansible.cfg path
+      set_fact:
+        ansible_config: "{{ ansible_config_output.stdout_lines | select('search', 'CONFIG_FILE') | first | split(': ') | last }}"
+
+    - name: Update ansible.cfg file to enable logger
+      delegate_to: localhost
+      become: no
+      lineinfile:
+        path: "{{ ansible_config }}"
+        insertafter: "[defaults]"
+        line: "{{ item }}"
+      loop:   
+        - "callback_whitelist = influxdb_logger"
+        - "callback_plugins = ~/.ansible/plugins/callback"
+
+

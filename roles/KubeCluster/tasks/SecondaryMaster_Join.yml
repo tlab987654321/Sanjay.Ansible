@@ -1,0 +1,3 @@
+- name: Join secondary master to cluster
+  command: "{{ hostvars['master1']['join_cmd'] }}" --control-plane --cri-socket unix:///var/run/docker.sock
+
