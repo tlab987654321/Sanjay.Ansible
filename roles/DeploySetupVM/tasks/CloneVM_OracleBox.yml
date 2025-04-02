@@ -1,19 +1,54 @@
-- name: Clone the VirtualBox VM
-  command: "/usr/bin/virtualboxvm clonevm '{{ template_name }}' --name='{{ server_name }}' --register"
+- name: Check if VM already exists
+  command: VBoxManage list vms
+  register: vm_list
+  changed_when: false
+  delegate_to: localhost
+
+- name: Clone the VirtualBox VM if it doesn't exist
+  command: "/usr/bin/VBoxManage clonevm '{{ template_name }}' --name='{{ vm.name }}' --register --mode all --basefolder '/VM'"
+  when: "vm.name not in vm_list.stdout"
   register: clone_result
-  changed_when: "'successfully cloned' in clone_result.stdout"
-  failed_when: "'successfully cloned' not in clone_result.stdout"
+  delegate_to: localhost
 
-- name: Start the cloned VM
-  command: "/usr/bin/virtualboxvm startvm '{{ server_name }}' --type headless"
+- name: Check if VM is Running
+  command: VBoxManage list runningvms
+  register: vm_running
+  changed_when: false
+  delegate_to: localhost
+
+- name: Start the cloned VM if it's not running
+  command: "/usr/bin/VBoxManage startvm '{{ vm.name }}' --type headless"
+  when: "vm.name not in vm_running.stdout"
   register: start_result
-  changed_when: "'VM started' in start_result.stdout"
-  failed_when: "'VM started' not in start_result.stdout"
+  delegate_to: localhost
 
-- name: Wait for the VM to become responsive (Linux)
-  when: vm_os_type == 'linux'
-  wait_for_connection:
-    host: "{{ new_ip }}"
-    port: 22
-    delay: 10
-    timeout: 300
+- name: Wait for VM to boot up
+  pause:
+    seconds: 30
+  when: "vm.name not in vm_running.stdout"
+
+- name: Update Ansible Inventory
+  lineinfile:
+    path: "{{ lookup('env', 'ANSIBLE_INVENTORY') }}"
+    line: "{{ vm.name }} {{ vm.ip }} ansible_user={{ ANSIBLE_USER }}"
+    create: yes
+  delegate_to: localhost
+
+- name: Update Hostname on New VM
+  become: true
+  hostname:
+    name: "{{ vm.name }}.{{ domain_name }}"
+  delegate_to: template
+
+- name: Update IP Address on the server
+  become: true
+  shell: nmcli connection modify "{{ network_interface }}" ipv4.addresses "{{ vm.ip }}/{{ prefix }}" ipv4.gateway "{{ gateway }}" ipv4.method manual
+  delegate_to: template
+
+- name: Reboot Server
+  become: true
+  command: sleep 5 && reboot
+  async: 1
+  poll: 0
+  delegate_to: template
+

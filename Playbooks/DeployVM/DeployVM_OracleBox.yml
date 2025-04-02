@@ -1,0 +1,6 @@
+---
+- name: Clone a VM from template on Oracle VirtualBox
+  hosts: setupvm
+  gather_facts: no
+  roles:
+    - DeploySetupVM

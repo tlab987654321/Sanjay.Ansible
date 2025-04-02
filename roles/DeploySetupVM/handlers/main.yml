@@ -1,2 +1,12 @@
 ---
 # handlers file for DeploySetupVM
+- name: Restart Network
+  command: nmcli connection reload
+  async: 45
+  poll: 0
+
+- name: Reboot Server
+  become: true
+  command: sleep 5 && reboot
+  async: 1
+  poll: 0

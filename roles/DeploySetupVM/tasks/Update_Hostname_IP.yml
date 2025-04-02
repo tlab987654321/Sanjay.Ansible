@@ -1,0 +1,15 @@
+---
+- name: Update Hostname on New VM
+  become: true
+  hostname:
+    name: "{{ vm.name }}.{{ domain_name }}"
+
+- name: Update IP Address on the server
+  become: true
+  shell: nmcli connection modify "{{ network_interface }}" ipv4.addresses "{{ vm.ip }}/{{ prefix }}" ipv4.gateway "{{ gateway }}" ipv4.method manual
+
+- name: Reboot Server
+  become: true
+  command: sleep 5 && reboot
+  async: 1
+  poll: 0
