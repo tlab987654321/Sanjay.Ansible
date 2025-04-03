@@ -3,24 +3,28 @@
   register: vm_list
   changed_when: false
   delegate_to: localhost
+  run_once: true
 
 - name: Clone the VirtualBox VM if it doesn't exist
   command: "/usr/bin/VBoxManage clonevm '{{ template_name }}' --name='{{ vm.name }}' --register --mode all --basefolder '/VM'"
   when: "vm.name not in vm_list.stdout"
   register: clone_result
   delegate_to: localhost
+  run_once: true
 
 - name: Check if VM is Running
   command: VBoxManage list runningvms
   register: vm_running
   changed_when: false
   delegate_to: localhost
+  run_once: true
 
 - name: Start the cloned VM if it's not running
   command: "/usr/bin/VBoxManage startvm '{{ vm.name }}' --type headless"
   when: "vm.name not in vm_running.stdout"
   register: start_result
   delegate_to: localhost
+  run_once: true
 
 - name: Wait for VM to boot up
   pause:
@@ -30,25 +34,55 @@
 - name: Update Ansible Inventory
   lineinfile:
     path: "{{ lookup('env', 'ANSIBLE_INVENTORY') }}"
-    line: "{{ vm.name }} {{ vm.ip }} ansible_user={{ ANSIBLE_USER }}"
+    line: "{{ vm.name }} ansible_host={{ vm.ip }} ansible_user={{ ANSIBLE_USER }}"
     create: yes
   delegate_to: localhost
+  run_once: true
 
 - name: Update Hostname on New VM
   become: true
   hostname:
     name: "{{ vm.name }}.{{ domain_name }}"
   delegate_to: template
+  run_once: true
 
 - name: Update IP Address on the server
   become: true
   shell: nmcli connection modify "{{ network_interface }}" ipv4.addresses "{{ vm.ip }}/{{ prefix }}" ipv4.gateway "{{ gateway }}" ipv4.method manual
   delegate_to: template
+  run_once: true
 
-- name: Reboot Server
+- name: Upgrade all packages
   become: true
-  command: sleep 5 && reboot
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+  run_once: true
+  delegate_to: template
+
+- name: Reboot the server
+  become: true
+#  reboot:
+#    reboot_command: sleep 5 && reboot -f
+#    connect_timeout: 10
+#    post_reboot_delay: 0  # Don't wait after reboot
+#   community.general.shutdown:
+#     reboot: yes
+  shell: sleep 5 && reboot -f
   async: 1
   poll: 0
+  ignore_errors: true
+  run_once: true
   delegate_to: template
+
+- name: Waiting for server to complete configurations
+  pause:
+    seconds: 10
+
+# - name: Start the Server
+#   command: "/usr/bin/VBoxManage startvm '{{ vm.name }}' --type headless"
+#   when: "vm.name not in vm_running.stdout"
+#   register: start_result
+#   delegate_to: localhost
+#   run_once: true
 
