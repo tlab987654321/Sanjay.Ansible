@@ -1,0 +1,6 @@
+---
+- name: Deploy Tracker Application on Docker
+  become: yes
+  hosts: tracker
+  roles:
+    - InstallDocker
