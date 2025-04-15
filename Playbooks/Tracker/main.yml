@@ -4,3 +4,5 @@
   hosts: tracker
   roles:
     - InstallDocker
+  tasks:
+    - include_tasks: DeployContainers.yml
