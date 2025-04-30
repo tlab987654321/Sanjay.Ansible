@@ -2,5 +2,8 @@
 - name: Clone a VM from template on Oracle VirtualBox
   hosts: setupvm
   gather_facts: no
+  vars:
+    vm_name: "lab-docker01"
+    vm_ip: "192.168.0.51"
   roles:
     - DeploySetupVM

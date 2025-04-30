@@ -1,0 +1,47 @@
+---
+# tasks file for DeploySetupVM
+- name: Build VM list
+  set_fact:
+    vm_list: "{{ vm_list | default([]) + new_list }}"
+  loop: "{{ vm_groups }}"
+  vars:
+    new_list: >-
+      {{
+        range(item.vm_count) | map('int') | map('extract', item, ip_base)
+      }}
+  loop_control:
+    loop_var: item
+
+  # Extract macro to use inside the loop
+  tasks:
+    - name: Define extract macro
+      set_fact:
+        extract_macro: |
+          {% macro extract(index, item, ip_base) -%}
+          {
+            "name": "{{ item.vm_base_name }}{{ '%02d' | format(index + 1) }}",
+            "ip": "{{ ip_base }}{{ item.ip_start + index }}",
+            "group": "{{ item.HOST_GROUP | regex_replace('\\[|\\]', '') }}"
+          }
+          {%- endmacro %}
+
+- name: Print List
+  debug:
+    msg: "Deploying {{ item.name }} with IP {{ item.ip }} in group {{ item.group }}"
+  loop: "{{ vm_list }}"
+  
+# - name: Clone a VM
+#   #when: inventory_hostname == "localhost"
+#   include_tasks: CloneVM_OracleBox.yml
+#   loop: "{{ item.name }}"
+#   loop_control:
+#     loop_var: vms
+
+# - name: Configure IP and Hostname 
+#   when: inventory_hostname == "template"
+#   include_tasks: Update_Hostname_IP.yml
+#   loop: "{{ vms }}"
+#   loop_control:
+#     loop_var: vm
+
+

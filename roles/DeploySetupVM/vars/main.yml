@@ -4,15 +4,20 @@
 domain_name: "sanjay-lab.local" # Replace with your Domain name
 #new_ip: "192.168.0.51" # Replace with the desired IP address
 ANSIBLE_USER: svcansadmin
-vm_base_name: lab-kubemaster
-vm_count: 2
 ip_base: 192.168.0.
-ip_start: 51
+vm_groups:
+  - HOST_GROUP: "[kubemaster]"
+    vm_base_name:  lab-kubemaster
+    vm_count: 1
+    ip_start: 51
+  - HOST_GROUP: "[kubeworker]"
+    vm_base_name: lab-kubeworker
+    vm_count: 1
+    ip_start: 61
 
-
-network_interface: "enp0s3" # Replace with the network interface name inside the VM (e.g., eth0, ens33, etc.)
+network_interface: "enp1s0" # Replace with the network interface name inside the VM (e.g., eth0, ens33, etc.)
 prefix: "24" # Replace with your prefix
 netmask: "255.255.255.0" # Replace with your netmask
-gateway: "192.168.56.1" # Replace with your gateway
+gateway: "192.168.0.1" # Replace with your gateway
 dns_nameservers: "8.8.8.8,8.8.4.4" # Replace with your DNS servers
 vm_os_type: "linux"

@@ -35,6 +35,7 @@
   lineinfile:
     path: "{{ lookup('env', 'ANSIBLE_INVENTORY') }}"
     line: "{{ vm.name }} ansible_host={{ vm.ip }} ansible_user={{ ANSIBLE_USER }}"
+    insertafter: "^{{ HOST_GROUP }}"
     create: yes
   delegate_to: localhost
   run_once: true

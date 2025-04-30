@@ -1,20 +1,3 @@
----
-# tasks file for DeploySetupVM
-- name: Generate VM list
-  set_fact:
-    vms: "{{ vms | default([]) + [{'name': vm_base_name + '%02d' | format(item), 'ip': ip_base + '%d' | format(ip_start + item - 1)}] }}"
-  loop: "{{ range(1, vm_count + 1) | list }}"
-  
-- name: Clone a VM
-  #when: inventory_hostname == "localhost"
-  include_tasks: CloneVM_OracleBox.yml
-  loop: "{{ vms }}"
-  loop_control:
-    loop_var: vm
-
-# - name: Configure IP and Hostname 
-#   when: inventory_hostname == "template"
-#   include_tasks: Update_Hostname_IP.yml
-#   loop: "{{ vms }}"
-#   loop_control:
-#     loop_var: vm
+- name: Configure IP and Hostname on the server
+  when: inventory_hostname == 'template'
+  include_tasks: Update_Hostname_IP.yml

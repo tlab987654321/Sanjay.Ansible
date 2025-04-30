@@ -1,0 +1,10 @@
+---
+  - name: Deploy Tracker Application
+    copy:
+      src: ./AppData
+      dest: /root/
+  - name: Build the docker image and deploy the containers
+    community.docker.docker_compose_v2:
+      project_src: /root/AppData
+      build: always
+      state: present

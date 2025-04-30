@@ -8,12 +8,12 @@
 
 - name: Deploy Required containers on Docker Host
   community.docker.docker_compose_v2:
-    project_name: Tracker
+    project_name: tracker
     definition:
       services:
         db01:
           container_name: Tracker_db01
-          image: mariadb/server
+          image: mariadb
           restart: always
           volumes:
             - mariadb_data:/var/lib/mysql
@@ -21,7 +21,7 @@
             - 3306:3306
         app01:
           container_name: Tracker_app01
-          image: 
+          image: python
           restart: always
           volumes:
             - app_data:/app
@@ -29,10 +29,4 @@
             - 8000:8000
       volumes:
         mariadb_data: 
-          driver_options:
-            type: btrfs
-            device: /app/MariaDB
         app_data:
-          driver_options:
-            type: btrfs
-            device: /app/Data

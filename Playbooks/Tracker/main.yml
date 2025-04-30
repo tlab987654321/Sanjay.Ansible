@@ -1,8 +1,18 @@
 ---
 - name: Deploy Tracker Application on Docker
   become: yes
-  hosts: tracker
+  hosts: all
+  gather_facts: no
+  vars:
+    vm_groups:
+    - HOST_GROUP: "[tracker]"
+      vm_base_name: lab-docker
+      vm_count: 1
+      ip_start: 71
   roles:
-    - InstallDocker
+    #- DeploySetupVM
+    #- InstallDocker ## Removed Temporarily
   tasks:
-    - include_tasks: DeployContainers.yml
+    - include_tasks: DeployTracker.yml
+    #- include_tasks: DeployContainers.yml
+      #delegate_to: tracker
