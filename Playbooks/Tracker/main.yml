@@ -11,7 +11,7 @@
       ip_start: 71
   roles:
     #- DeploySetupVM
-    #- InstallDocker ## Removed Temporarily
+    - InstallDocker ## Removed Temporarily
   tasks:
     - include_tasks: DeployTracker.yml
     #- include_tasks: DeployContainers.yml
