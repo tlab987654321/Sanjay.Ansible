@@ -2,7 +2,8 @@ Version = "1_0"
 import logging
 import os
 from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, CallbackQueryHandler, filters
-from telegram_bot import start, amount, transaction_type, category, description, error, cancel, help_command
+#from telegram_bot import start, amount, transaction_type, category, description, error, cancel, help_command, show_today, show_week, show_month, menu_callback
+from telegram_bot import *
 from dotenv import load_dotenv
 
 
@@ -38,6 +39,11 @@ def main():
     # Add the conversation handler to the bot
     application.add_handler(conversation_handler)
     application.add_handler(CommandHandler('help', help_command))
+    application.add_handler(CallbackQueryHandler(menu_callback, pattern="^(start|today|week|month)$"))
+    application.add_handler(CommandHandler("today", show_today))
+    application.add_handler(CommandHandler("week", show_week))
+    application.add_handler(CommandHandler("month", show_month))
+
 
     # Start polling
     application.run_polling()

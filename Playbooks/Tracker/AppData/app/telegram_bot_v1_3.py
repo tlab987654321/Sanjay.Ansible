@@ -182,6 +182,7 @@ def format_transactions_table(records):
 
 # Handler to show Todays Records
 async def show_today(update: Update, context: CallbackContext):
+    
     today = datetime.now().date()
     records = get_transactions_by_period(today, today)
     await update.message.reply_text(f"*Today's Transactions:*\n\n```{format_transactions_table(records)}```", parse_mode='Markdown')

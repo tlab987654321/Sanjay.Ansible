@@ -1,6 +1,7 @@
 import mysql.connector
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -55,3 +56,26 @@ def save_data_to_db(amount, transaction_type, category, description, username):
     conn.commit()
     cursor.close()
     conn.close()
+
+# Function to get Transactions
+def get_transactions_by_period(start_date, end_date):
+    conn = mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME")
+    )
+    cursor = conn.cursor()
+
+    query = """
+        SELECT amount, type, category, user, timestamp, description
+        FROM transactions
+        WHERE DATE(timestamp) BETWEEN %s AND %s
+        ORDER BY timestamp ASC
+    """
+    cursor.execute(query, (start_date, end_date))
+    result = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return result

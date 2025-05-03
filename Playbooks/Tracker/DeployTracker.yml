@@ -4,7 +4,11 @@
       src: ./AppData
       dest: /root/
   - name: Build the docker image and deploy the containers
-    community.docker.docker_compose_v2:
-      project_src: /root/AppData
-      build: always
-      state: present
+    shell: docker compose up -d
+    args:
+      chdir: /root/AppData
+
+      #    community.docker.docker_compose_v2:
+      #      project_src: /root/AppData
+      #      build: always
+      #      state: present
