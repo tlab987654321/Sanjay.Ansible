@@ -8,8 +8,8 @@ services:
       MYSQL_DATABASE: finance_tracker
     volumes:
       - mariadb_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    #ports:
+    #  - "3306:3306"
 
   web:
     build: .

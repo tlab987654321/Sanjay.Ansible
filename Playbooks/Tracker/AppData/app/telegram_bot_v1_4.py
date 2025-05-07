@@ -6,6 +6,7 @@ from telegram.ext import (
     MessageHandler, CallbackQueryHandler, filters, CallbackContext
 )
 from db import save_data_to_db
+from collections import defaultdict
 import re
 
 # Define categories
@@ -205,13 +206,10 @@ def format_transactions_table(records):
 
     header = f"{'Report'} {'Amount':<8}| {'Type':<7}| {'Category':<8}| {'User':<10}| {'Date':<4}| {'Desc'}\n"
     lines = [header, "-" * 58]
-    total = 0.0
     for r in records:
         amount, t_type, category, user, timestamp, desc = r
-        total += float(amount)
         lines.append(f"{amount:<8}| {t_type:<7}| {category:<8}| {user:<10}| {timestamp.strftime('%Y-%m-%d'):<8}| {desc}")
-    lines.append("-" * 58)
-    lines.append(f"Total: ₹{total:.2f}")
+
     return "\n".join(lines)
 
 # Handler to show Todays Records
@@ -235,6 +233,71 @@ async def show_month(update: Update, context: CallbackContext):
     end = today
     records = get_transactions_by_period(start, end)
     await update.message.reply_text(f"*This Month's Transactions:*\n\n```{format_transactions_table(records)}```", parse_mode='Markdown')
+
+# Show summary for Transactions
+
+async def show_summary(update: Update, context: CallbackContext):
+    keyboard = [
+        [
+            InlineKeyboardButton("📅 Today", callback_data='summary_today'),
+            InlineKeyboardButton("📆 This Week", callback_data='summary_week'),
+            InlineKeyboardButton("🗓️ This Month", callback_data='summary_month')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "📊 Select a period to view your expense summary:",
+        reply_markup=reply_markup
+    )
+
+async def summary_callback(update: Update, context: CallbackContext):
+    query = update.callback_query
+    await query.answer()
+    selection = query.data
+
+    today = datetime.now().date()
+    if selection == 'summary_today':
+        start_date = end_date = today
+        title = "📅 Today's Expenses"
+    elif selection == 'summary_week':
+        start_date = today - timedelta(days=today.weekday())  # Start of the week (Monday)
+        end_date = today
+        title = "📆 This Week's Expenses"
+    elif selection == 'summary_month':
+        start_date = today.replace(day=1)  # Start of the month
+        end_date = today
+        title = "🗓️ This Month's Expenses"
+    else:
+        await query.edit_message_text("❌ Invalid selection.")
+        return
+
+    # Retrieve transactions within the selected period
+    records = get_transactions_by_period(start_date, end_date)
+
+    if not records:
+        await query.edit_message_text(f"{title}\n\nNo transactions found.")
+        return
+
+    # Aggregate expenses by category
+    category_totals = defaultdict(float)
+    total_expense = 0.0
+    for record in records:
+        amount, _, category, _, _, _ = record  # Adjust indices based on your record structure
+        amount = float(amount)
+        category_totals[category] += amount
+        total_expense += amount
+
+    # Format the summary message
+    summary_lines = [f"{title}\n"]
+    for category, amount in category_totals.items():
+        summary_lines.append(f"• {category}: ₹{amount:.2f}")
+    summary_lines.append(f"\n💰 Total: ₹{total_expense:.2f}")
+
+    await query.edit_message_text("\n".join(summary_lines))
+
+
+
+
 
 # Fallback for unexpected inputs
 async def error(update: Update, context: CallbackContext) -> None:

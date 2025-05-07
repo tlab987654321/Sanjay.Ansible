@@ -12,10 +12,10 @@ load_dotenv()
 
 # Get the Telegram bot token from environment variables
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_TOKEN')
-#TELEGRAM_BOT_TOKEN = "8099331265:AAG9hTYLo-5gX7R3Hsw8iJdyZdSyOlfnOlk"
 
 # Constants for conversation states (must match telegram_bot.py)
-START, AMOUNT, TYPE, CATEGORY, DESCRIPTION = range(5)
+#START, AMOUNT, TYPE, CATEGORY, DESCRIPTION = range(5)
+START, AMOUNT, CATEGORY, DESCRIPTION = range(4)
 
 # Main function to run the bot
 def main():
@@ -29,7 +29,7 @@ def main():
         entry_points=[CommandHandler('start', start), CommandHandler('cancel', cancel)],
         states={
             AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, amount)],
-            TYPE: [CallbackQueryHandler(transaction_type)],
+            #TYPE: [CallbackQueryHandler(transaction_type)], # Removed Type
             CATEGORY: [CallbackQueryHandler(category)],
             DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, description)],
         },
@@ -43,6 +43,8 @@ def main():
     application.add_handler(CommandHandler("today", show_today))
     application.add_handler(CommandHandler("week", show_week))
     application.add_handler(CommandHandler("month", show_month))
+    application.add_handler(CommandHandler("summary", show_summary))
+    application.add_handler(CallbackQueryHandler(summary_callback, pattern='^summary_'))
 
 
     # Start polling
