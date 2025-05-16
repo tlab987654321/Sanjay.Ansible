@@ -32,8 +32,8 @@ def create_table_if_not_exists():
         );
     """)
     connection.commit()
-    cursor.close()
-    connection.close()
+    #cursor.close()
+    #connection.close()
 
     # Create the users table if it doesn't exist
     cursor.execute("""
