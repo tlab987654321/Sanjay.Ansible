@@ -5,13 +5,13 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: Passw0rd
-      MYSQL_DATABASE: finance_tracker
+      MYSQL_DATABASE: "finance_tracker"
     volumes:
       - mariadb_data:/var/lib/mysql
     #ports:
     #  - "3306:3306"
 
-  web:
+  app:
     build: .
     env_file:
       - .env
@@ -30,6 +30,17 @@ services:
     volumes:
       - ./app:/app
     #command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  web:
+    image: nginx:latest
+    container_name: expense_tracker_web
+    ports:
+      - "80:80"
+    volumes:
+      - ./web:/usr/share/nginx/html
+    depends_on:
+      - mariadb
+      - app
 
 volumes:
   mariadb_data:

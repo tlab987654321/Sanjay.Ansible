@@ -35,6 +35,21 @@ def create_table_if_not_exists():
     cursor.close()
     connection.close()
 
+    # Create the users table if it doesn't exist
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            userid VARCHAR(15),
+            mobile BIGINT,
+            otp VARCHAR(15),
+            otpexp TIMESTAMP NULL,
+            UNIQUE (mobile, userid)
+        );
+    """)
+    connection.commit()
+    cursor.close()
+    connection.close()
+
 # Call the function to ensure the table is created
 create_table_if_not_exists()
 
@@ -79,3 +94,13 @@ def get_transactions_by_period(start_date, end_date):
     cursor.close()
     conn.close()
     return result
+
+# Create admin user if not exists
+def create_admin_account():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "INSERT INTO users (userid, mobile, otp, otpexp) VALUES ('admin', '0', 'admin', NULL)"
+    cursor.execute(query)
+    conn.commit()
+    cursor.close()
+    conn.close()
