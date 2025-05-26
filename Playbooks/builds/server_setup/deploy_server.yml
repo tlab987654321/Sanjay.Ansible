@@ -1,0 +1,33 @@
+---
+  - name: Deploy a new Server in QEMU
+    hosts: dell
+    become: yes
+    vars_files:
+      - vars.yml
+    vars:
+      server_name: "{{ NEWSERVERNAME }}"
+    tasks:
+      - name: Check if VM already present
+        shell: "virsh list --all | grep {{ server_name }} | awk '{print $2}'"
+        register: vm_available
+      - name: Deploy a server from template
+        command: "virt-clone --original centos8 --auto-clone --name {{ server_name }}"
+        when: vm_available.stdout.find("{{ server_name }}") != 0
+      - name: Start the new server
+        virt:
+          name: "{{ server_name }}"
+          state: running
+      - name: Check if VM is running
+        shell: "virsh list --all | grep {{ server_name }} | awk '{print $3}'"
+        register: vm_running
+      # command: "virsh start {{ server_name }}"
+      # when: vm_running.stdout.find('running') != 0
+      - name: Not Running - Sleep for 10 min and continue
+        wait_for:
+          timeout: 600
+        when: vm_running.stdout.find('running') != 0
+      - name: Booting - Sleep for 2 min and continue
+        wait_for:
+          timeout: 120
+        when: vm_running.stdout.find('running') == 0
+      

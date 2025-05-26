@@ -1,0 +1,23 @@
+  - name: "Deploy and Setup DB for Application Build"
+    hosts: ProdTracker
+    become: yes
+    vars_files:
+      - ../vars.yml
+    vars:
+      ansible_home: "{{ HOME }}"
+      app_name: "{{ ApplicationName }}"
+      mysql_root_password: "{{ ROOTPASSWORD }}"
+      mysql_service_account: "{{ SERVICEACCOUNT }}"
+      mysql_svcacc_password: "{{ SVCACCPASSWORD }}"
+      mysql_svc_user: "{{ SERVICEACCOUNT }}"
+      mysql_svc_pass: "{{ SVCACCPASSWORD }}"
+      mysql_db_1_name: "{{ DATADB }}"
+      mysql_db_2_name: "{{ ACCOUNTSDB }}"
+      mysql_db_3_name: "{{ SETTINGSDB }}"
+      mysql_db_4_name: "{{ MENUDB }}"
+      path: "{{ ansible_home }}{{ app_name }}"
+    tasks:
+      - name: "Install and Configure MariaDB Server"
+        include_tasks: "mariadb_deploy.yml"
+      - name: "Create Databased and Tables for {{ app_name }}"
+        include_tasks: "databases_setup.yml"

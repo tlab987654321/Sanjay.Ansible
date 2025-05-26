@@ -1,0 +1,22 @@
+---
+      - name: "Install Web Service"
+        yum:
+          name: 
+            - yum
+            - php*
+          state: present
+      - name: "Start and enable HTTP Service"
+        service:
+          name: httpd
+          state: started
+          enabled: yes
+      - name: "Allow http port in firewall"
+        firewalld:
+          service: http
+          permanent: true
+          state: enabled
+      - name: "Install GIT"
+        yum:
+          name:
+            - git
+          state: present

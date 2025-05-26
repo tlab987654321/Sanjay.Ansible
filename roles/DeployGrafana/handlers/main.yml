@@ -1,0 +1,6 @@
+---
+# handlers file for DeployGrafana
+- name: "Restart Grafana service"
+  service:
+    name: grafana-server
+    state: restarted

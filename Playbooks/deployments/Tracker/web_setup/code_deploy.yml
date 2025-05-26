@@ -1,0 +1,55 @@
+---
+      # - name: "Setup tempuser for authentication with GithHub"
+      #   user:
+      #     name: gituser
+      #     comment: "Git User to connect to Github"
+      #     password: "{{ gituser_password }}"
+      #     state: present
+      # - name: Copy the key files
+      #   copy:
+      #     src: "{{ path }}/.ssh"
+      #     dest: /home/gituser/
+      #     owner: gituser
+      #     group: gituser
+      # - name: "Set permissions for key file"
+      #   file: 
+      #     name: /home/gituser/.ssh/id_rsa
+      #     mode: 0600    
+      - name: Setup Access to Git Hub repository
+        # become_user: root
+        copy:
+          src: "../.ssh"
+          dest: /root/
+          owner: root
+          group: root
+      - name: "Set permissions"
+        # become_user: root
+        file: 
+          name: /root/.ssh/id_rsa
+          mode: 0600
+      - name: "Backup http directory"
+        # become_user: root
+        command: mv /var/www/html /var/www/html_bkp 2> /dev/null
+      - name: "Download the code from github"
+        # become_user: root
+        git:
+          repo: "{{ git_ssh_url }}"
+          ssh_opts: -o StrictHostKeyChecking=no
+          dest: /tmp/html
+      - name: "Place the code in http directory"
+        # become_user: root
+        command: mv /tmp/html /var/www/
+      - name: "Set permissions for html directory"
+        file: 
+          dest: /var/www/html
+          owner: apache
+          group: apache
+          recurse: yes
+      # - name: "Removing tempuser"
+      #   user:
+      #     name: gituser
+      #     state: absent
+      # - name: "Cleanup tempuser configuration"
+      #   file:
+      #     name: /home/gituser
+      #     state: absent

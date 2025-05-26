@@ -1,0 +1,9 @@
+---
+  - name: "List OCI Instances"
+    connection: local
+    hosts: localhost
+    tasks:
+      - name: "Gather OCI Compute Instance details"
+        oci_compute_instance: 
+          namespace_name: 'Oracle-Tags'
+          compartment_id: 'ocid1.tenancy.oc1..aaaaaaaaxwbgizymuavkrlijiaetqmu25dnv5ura362lyqfltqlaxndhgj5q'

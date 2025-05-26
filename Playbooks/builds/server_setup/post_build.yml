@@ -1,0 +1,46 @@
+  - name: "Setup the Server"
+    hosts: react-server
+    become: yes
+    tasks:
+      - name: "Create vscode Repository"
+        copy: 
+          dest: "/etc/yum.repos.d/vscode.repo"
+          content: |
+            [code]
+            name=Visual Studio Code
+            baseurl=https://packages.microsoft.com/yumrepos/vscode
+            enabled=1
+            gpgcheck=1
+            gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+      - name: "Import GPG Key"
+        rpm_key:
+          state: present
+          key: https://packages.microsoft.com/keys/microsoft.asc
+      - name: "Install VS Code Server"
+        dnf:
+          name: code
+          state: present
+      - name: "Create /app directory"
+        file:
+          path: /app
+          state: directory
+          mode: 0777
+      - name: "Start Code server"
+        command: code --user-data-dir /app
+      - name: "Install yum utils"
+        dnf:
+          name: yum-utils
+          state: present
+      - name: "Update Packages on Remote Server"
+        yum: 
+          name: '*'
+          state: latest
+      - name: "Check if Reboot is required"
+        shell: needs-restarting
+        register: reboot_required_file
+      - name: "Reboot the servers"
+        reboot:
+        when: reboot_required_file == true
+      - name: Sleep for 5 min and continue
+        wait_for:
+          timeout: 300

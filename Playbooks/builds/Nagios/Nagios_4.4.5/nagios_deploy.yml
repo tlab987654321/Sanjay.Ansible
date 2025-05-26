@@ -1,0 +1,140 @@
+---
+  - name: "Deploy Nagios"
+    hosts: nagios
+    become: yes
+    tasks:
+      - name: "Install LAMP and required packages"
+        yum:
+          name: 
+            - httpd
+            - httpd-tools
+            - php
+            - gcc
+            - glibc
+            - glibc-common 
+            - gd
+            - gd-devel
+            - make
+            - net-snmp
+            - mariadb-server
+            - php-mysqlnd
+            - php-fpm
+            - wget
+            - perl
+            - postfix
+          state: present
+      #- name: "Allow port 80 in Firewall"
+      #  firewalld:
+      #    port: 80/tcp
+      #    permanent: yes
+      #    immediate: yes
+      #    state: enabled
+      - name: "Install passlib"
+        pip:
+          name: passlib
+      - name: "Start and Enable http service"
+        service:
+          name: httpd
+          state: started
+          enabled: yes
+      #- include: mariadb_deploy.yml
+      - name: "Create a group"
+        group:
+          name: nagiosxi
+          state: present
+      - name: "Create nagios user"
+        user:
+          name: nagios
+          password: nagios
+          groups: nagiosxi
+          state: present
+      - name: "Add users to nagiosxi"
+        user:
+          name: apache
+          groups: nagiosxi
+          append: yes
+          #- name: "Download nagios core files"
+          #get_url: 
+          #url: https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.5.tar.gz
+          #dest: /tmp
+      - name: "Extract nagios core"
+        unarchive:
+          src: dumps/nagios-4.4.5.tar.gz
+          dest: /tmp
+          remote_src: no
+      - name: "Build and compile Nagios - configure"
+        shell: |
+          ./configure --with-command-group=nagiosxi
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make all"
+        shell: |
+          make all
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install"
+        shell: |
+          make install
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install-init"
+        shell: |
+          make install-init
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install-daemoninit"
+        shell: |
+          make install-daemoninit
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install-config"
+        shell: |
+          make install-config
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install-commandmode"
+        shell: |
+          make install-commandmode
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install-exfoliation"
+        shell: |
+          make install-exfoliation
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - make install-exfoliation"
+        shell: |
+          make install-webconf
+        args:
+          chdir: /tmp/nagios-4.4.5/
+      - name: "Build and compile Nagios - htpasswd"
+        htpasswd:
+          path: "/usr/local/nagios/etc/htpasswd.users"
+          name: "nagiosadmin"
+          #group: "nagiosadmin"
+          password: "Passw0rd"
+      - name: "Restarting httpd service"
+        service:
+          name: httpd
+          state: restarted
+          #- name: "Download nagios plugin files"
+          #get_url: 
+          #url: https://nagios-plugins.org/download/nagios-plugins-2.2.1.tar.gz
+          #dest: /tmp
+      - name: "Extract nagios Plugin"
+        unarchive:
+          src: dumps/nagios-plugins-2.2.1.tar.gz
+          dest: /tmp
+          remote_src: no
+      - name: "Buils and compile Nagios plugin"
+        args:
+          chdir: /tmp/nagios-plugins-2.2.1/
+        shell: |
+          ./configure --with-nagios-user=nagios --with-nagios-group=nagiosxi
+          make all
+          make install
+          /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+      - name: "Start and enabled nagios service"
+        service:
+          name: nagios
+          state: restarted

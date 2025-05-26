@@ -1,0 +1,13 @@
+---
+- name: List Compute Instances
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: "List Instances"
+      oci_compute_instance:
+        namespace_name: 'Oracle-Tags'
+        compartment_id: 'ocid1.tenancy.oc1..aaaaaaaaxwbgizymuavkrlijiaetqmu25dnv5ura362lyqfltqlaxndhgj5q'
+      register: result
+    - name: Dump result
+      debug:
+        msg: '{{ result }}'

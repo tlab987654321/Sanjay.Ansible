@@ -1,0 +1,52 @@
+---
+# tasks file for DeployELK
+- name: Copy ELK repository file
+  copy:
+    src:  elasticsearch.repo
+    dest: /etc/yum.repos.d/elasticsearch.repo
+- name: Install Kibana and Elastic Search packages
+  yum:
+    name: 
+    - kibana
+    - elasticsearch
+    state: present
+- name: Update the configurations
+  lineinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    insertbefore: "#----------------------- END SECURITY AUTO CONFIGURATION -------------------------"
+    line: "action.auto_create_index: .monitoring*,.watches,.triggered_watches,.watcher-history*,.ml*"
+    state: present 
+    backup: yes
+#      - name: Reset elastic user password
+#        ansible.builtin.expect:
+#          command: /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic
+#          responses: 
+#            Please confirm that you would like to continue [y/N] : 'y'
+- name: Start and enable elasticsearch Services
+  service:
+    name: elasticsearch
+    state: started
+    enabled: yes   
+- name: Waiting for elasticsearch service to start completely
+  wait_for:
+    timeout: 10
+- name: Generate kibana token
+  command: /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana
+  register: kibana_token
+#- name: Create Password file
+#  copy:
+#    dest: /etc/elasticsearch/.elastic.tmp
+#    content: Passw0rd
+#    mode: 666
+- name: Update Kibana configuration
+  shell: |
+    cp /etc/kibana/kibana.yml /etc/kibana/kibana.yml-$(date "+%Y.%m.%d-%H.%M.%S");
+    echo 'server.host: "0.0.0.0"' >> /etc/kibana/kibana.yml;
+- name: Start and enable kibana Service
+  service:
+    name: kibana
+    state: started
+    enabled: yes
+- name: Generate Auth code
+  command: /usr/share/kibana/bin/kibana-verification-code.
+  register: kibana_auth

@@ -1,0 +1,33 @@
+---
+  - name: Configure OS
+    hosts: template
+    become: yes
+    vars_files:
+      - vars.yml
+    vars:
+      server_name: "{{ NEWSERVERNAME }}"
+      ad_domain: "{{ DOMAIN }}"
+      server_ip: "{{ IPADDR }}"
+      ad_dns_ip: "{{ DNS }}"
+      ansible_user: "{{ ANSIBLE_USER }}"
+    tasks:
+      - name: Add DNS server IP
+        lineinfile:
+          path: /etc/sysconfig/network-scripts/ifcfg-enp1s0
+          regexp: "DNS1="
+          line: "DNS1={ ad_dns_ip }}"
+          insertafter: "NETMASK"
+      - name: Assign hostname to the server
+        hostname:
+          name: "{{ server_name }}.{{ ad_domain }}"
+      - name: Assign IP Address
+        lineinfile:
+          path: /etc/sysconfig/network-scripts/ifcfg-enp1s0
+          regexp: "IPADDR="
+          line: "IPADDR={{ server_ip }}"
+     # - name: Reboot host and wait for it to restart
+     #   command: shutdown -r now
+     # - name: Sleep for 2 min and continue
+     #   wait_for:
+     #     timeout: 120
+

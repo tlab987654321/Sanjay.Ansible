@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  tracker:
+    build: 
+      context: .
+    ports:
+      - "8000:8000" 
+    volumes: 
+      - "./Data/AppData:/Python/WebApps"
+      - "./Data/Logs/App_Logs:/Python/WebApps/Logs"
+  mongodb:
+    image: mongodb/mongodb-community-server:4.4.10-ubi8 
+    volumes:
+      - "./Data/MongoDB/data:/data/"
+      - "./Data/MongoDB/init:/docker-entrypoint-initdb.d"
+      - "./Data/Logs/DB_Logs:/var/log/mongodb/"
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin  # Root username
+      MONGODB_INITDB_ROOT_PASSWORD: password

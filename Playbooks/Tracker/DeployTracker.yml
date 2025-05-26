@@ -1,16 +1,33 @@
 ---
-  - name: Deploy Tracker Application
+  - name: Create the directory for Deploying Application
     copy:
-      src: ./AppData
-      dest: /root/
+      src: Docker
+      dest: /
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Copy the SSH key for GitHub access
+    copy:
+      src: /Backup/keys/id_rsa
+      dest: /root/.ssh/git_id_rsa
+      owner: root
+      group: root
+      mode: '0600'
+
+  - name: Clone the GitHub repository
+    git:
+      repo: git@github.com:tlab987654321/Tracker_Telegram.git
+      dest: /Docker/AppData
+      version: main
+      force: yes
+      update: yes
+      accept_hostkey: yes
+      key_file: /root/.ssh/git_id_rsa
 
   - name: Build the docker image and deploy the containers
-    # shell: docker compose up -d
-    # args:
-    #   chdir: /root/AppData
-
     community.docker.docker_compose_v2:
-      project_src: /root/AppData
+      project_src: /Docker
       build: always
       state: present
-      #restarted: true
+      recreate: always

@@ -1,0 +1,13 @@
+- hosts:
+    - localhost
+  tasks:
+    - name: Sending an e-mail status notification
+      mail:
+        host: smtp.mailgun.org
+        port: 587
+        username: reminder@sandboxba8dbdc9c175434690fc19ea790bcbda.mailgun.org
+        password: 08578ca2caa14e652115f799739a55a2-2bab6b06-ccbf79fe
+        to: tlab987654321@gmail.com
+        subject: Ansible Report
+        body: System [[ ansible_hostname ]] has been successfully provisioned.
+      delegate_to: localhost

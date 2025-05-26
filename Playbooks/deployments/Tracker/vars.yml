@@ -1,0 +1,37 @@
+### SMTP ###
+SMTP: smtp.mailgun.org
+PORT: 587
+USER: reminder@sandboxba8dbdc9c175434690fc19ea790bcbda.mailgun.org
+PASS: 08578ca2caa14e652115f799739a55a2-2bab6b06-ccbf79fe
+FROM: DoNotReply@testlab.website
+TO: tlab987654321@gmail.com
+
+### Defaults ###
+HOME: ~/Ansible/deployments/
+ApplicationName: Tracker
+
+### DB ###
+DBHOST: dbserver
+DB_IP: 127.0.0.1
+ROOTPASSWORD: Passw0rd
+SERVICEACCOUNT: svcdbusernew
+SVCACCPASSWORD: Pass@word098
+DATADB: datadb
+ACCOUNTSDB: accountdb
+SETTINGSDB: confdb
+MENUDB: menudb
+
+### GIT ###
+GITSSHURL: "git@github.com:tlab987654321/tracker.git"
+GITUSER: gituser@123
+
+###WEB ###
+ENVIRONMENT: Prod
+WEBHOST: webserver
+ANSIBLE_USER: opc
+NEWSERVERNAME: lab-prd-tracker01
+IPADDR: 192.168.1.211
+DNS: 8.8.8.8
+DOMAIN: testlab.website
+USER: svcansible
+PASSWORD: Pass@word098

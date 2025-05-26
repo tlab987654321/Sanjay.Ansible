@@ -1,0 +1,25 @@
+---
+  - name: "Deploy Nagios"
+    hosts: nagios
+    become: yes
+    tasks:
+      #- name: "Allow port 80 in Firewall"
+      #  firewalld:
+      #    port: 80/tcp
+      #    permanent: yes
+      #    immediate: yes
+      #    state: enabled
+      - name: "Extract nagios core"
+        unarchive:
+          src: dumps/xi-latest.tar.gz
+          dest: /tmp
+          remote_src: no
+      - name: "Build and compile Nagios - configure"
+        shell: |
+          ./fullinstall -n
+        args:
+          chdir: /tmp/nagiosxi/
+      - name: "Start and enabled nagios service"
+        service:
+          name: nagios
+          state: restarted

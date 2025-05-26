@@ -1,0 +1,18 @@
+---
+# tasks file for DeployGrafana
+- name: "Create Grafana Repository"
+  copy:
+    src: grafana.repo
+    dest: "/etc/yum.repos.d/grafana.repo"
+- name: "Install Grafana"
+  yum:
+    name: grafana
+    state: present
+  notify:
+  - Restart Grafana service
+- name: "Allow port 3000 in Firewall"
+  firewalld:
+    port: 3000/tcp
+    permanent: yes
+    immediate: yes
+    state: enabled

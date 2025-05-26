@@ -1,0 +1,61 @@
+---
+      - name: "Add Hosts Entry in hosts file"
+        lineinfile: 
+          path: /etc/hosts
+          state: present
+          line: "{{ item }}"
+        loop: 
+          - "{{ db_ip }}  {{ db_host }}.{{ domain_name }} {{ db_host }}"
+          - "{{ web_ip }}  {{ web_host }}.{{ domain_name }} {{ web_host }}"
+      - name: "Create Vars Path"
+        file:
+          path: "/var/www/vars/"
+          state: directory
+          mode: '0755'
+          owner: apache
+          group: apache
+          recurse: yes
+      - name: "Create vars file"
+        copy:
+          src: "vars.php"
+          dest: "/var/www/vars/vars-{{ env }}.php"
+          mode: '0777'
+          owner: apache
+          group: apache
+      - name: Update DB Connectivity settings
+        shell: |
+          sed -i 's/DBHOST/{{ db_host }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/DATADB/{{ mysql_db_1_name }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/ACCOUNTSDB/{{ mysql_db_2_name }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/CONFDB/{{ mysql_db_3_name }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/MENUDB/{{ mysql_db_4_name }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/SERVICEACCOUNT/{{ mysql_service_account }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/SVCACCPASSWORD/{{ mysql_svcacc_password }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/APPLICATION/{{ app_name }}/g' "/var/www/vars/vars-{{ env }}.php";
+          sed -i 's/ENVIRONMENT/{{ env }}/g' "/var/www/vars/vars-{{ env }}.php";
+      - name: "Create Log Path"
+        file:
+          path: "/var/log/{{ app_name }}"
+          state: directory
+          mode: '0777'
+          owner: apache
+          group: apache
+          recurse: yes
+      - name: "Create Log File"
+        file:
+          path: "/var/log/{{ app_name }}/app.log"
+          state: touch
+      - name: "Create Soft Link"
+        file: 
+          src: "/var/log/{{ app_name }}/app.log"
+          dest: /var/www/html/Logs/app-{{ env }}.log
+          state: link
+      - name: Allow user apache to use sudo
+        lineinfile:
+          path: /etc/sudoers
+          state: present
+          insertafter: '^## Same thing without a password'
+          regexp: '^apache ALL='
+          line: 'apache ALL=(ALL) NOPASSWD: ALL'
+          validate: /usr/sbin/visudo -cf %s
+

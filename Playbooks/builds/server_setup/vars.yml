@@ -1,0 +1,5 @@
+NEWSERVERNAME : react-server
+DOMAIN: testlab.website
+IPADDR: 192.168.1.215
+DNS: 192.168.1.1
+ANSIBLE_USER: sanjay

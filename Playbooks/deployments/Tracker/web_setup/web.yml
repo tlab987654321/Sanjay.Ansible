@@ -1,0 +1,30 @@
+  - name: "Install and Deploy Web Server Application"
+    hosts: ProdTracker
+    become: yes
+    vars_files:
+      - ../vars.yml
+    vars:
+      ansible_home: "{{ HOME }}"
+      app_name: "{{ ApplicationName }}"
+      mysql_service_account: "{{ SERVICEACCOUNT }}"
+      mysql_svcacc_password: "{{ SVCACCPASSWORD }}"
+      git_ssh_url: "{{ GITSSHURL }}"
+      gituser_password: "{{ GITUSER }}"
+      path: "{{ ansible_home }}{{ app_name }}"
+      db_host: "{{ DBHOST }}"
+      db_ip: "{{ DB_IP }}"
+      web_host: "{{ WEBHOST }}"
+      web_ip: "{{ IPADDR }}"
+      domain_name: "{{ DOMAIN }}"
+      mysql_db_1_name: "{{ DATADB }}"
+      mysql_db_2_name: "{{ ACCOUNTSDB }}"
+      mysql_db_3_name: "{{ SETTINGSDB }}"
+      mysql_db_4_name: "{{ MENUDB }}"
+      env: "{{ ENVIRONMENT }}"
+    tasks:
+      - name: "Install and Configure Web (http) Server"
+        include_tasks: "http_deploy.yml"
+      - name: "Deploy the code from source repository for  {{ app_name }}"
+        include_tasks: "code_deploy.yml"
+      - name: "Configure Application" 
+        include_tasks: "app_setup.yml"

@@ -1,0 +1,46 @@
+---
+  - name: "Deploy Web code"
+    hosts: webserver
+    become: yes
+    vars_files:
+      - ../vars.yml
+    vars:
+      ansible_home: "{{ HOME }}"
+      app_name: "{{ ApplicationName }}"
+      mysql_service_account: "{{ SERVICEACCOUNT }}"
+      mysql_svcacc_password: "{{ SVCACCPASSWORD }}"
+      git_ssh_url: "{{ GITSSHURL }}"
+      gituser_password: "{{ GITUSER }}"
+      path: "{{ ansible_home }}{{ app_name }}"
+    tasks:
+      - name: "Setup tempuser for authentication with GithHub"
+        user:
+          name: gituser
+          comment: "Git User to connect to Github"
+          password: "{{ gituser_password }}"
+          state: present
+      - name: Copy the key files
+        copy:
+          src: "{{ path }}/.ssh"
+          dest: /home/gituser/
+          owner: gituser
+          group: gituser
+      - name: "Set permissions for key file"
+        file: 
+          name: /home/gituser/.ssh/id_rsa
+          mode: 0600    
+      - name: "Download the code from github"
+        #become: yes
+        become_user: gituser
+        git:
+          repo: "{{ git_ssh_url }}"
+          ssh_opts: -o StrictHostKeyChecking=no
+          dest: /tmp/reminder
+      - name: "Removing tempuser"
+        user:
+          name: gituser
+          state: absent
+      - name: "Cleanup tempuser configuration"
+        file:
+          name: /home/gituser
+          state: absent

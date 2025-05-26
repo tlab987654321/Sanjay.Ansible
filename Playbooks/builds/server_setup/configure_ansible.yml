@@ -1,0 +1,27 @@
+---
+  - name: Configure OS
+    hosts: localhost
+    become: yes
+    vars_files:
+      - vars.yml
+    vars:
+      server_name: "{{ NEWSERVERNAME }}"
+      ad_domain: "{{ DOMAIN }}"
+      server_ip: "{{ IPADDR }}"
+      ad_dns_ip: "{{ DNS }}"
+      ansible_user: "{{ ANSIBLE_USER }}"
+    tasks:
+      - name: Add server to Ansible Inventory
+        lineinfile: 
+          dest: /etc/ansible/hosts
+          line: '{{ item }}'
+        with_items:
+          -  "  "
+          - "[{{ server_name }}]"
+          - "{{ server_ip }} ansible_user={{ ansible_user }}"
+      - name: Reboot host and wait for it to restart
+        become: no
+        command: "ssh 192.168.1.222 sudo reboot &"
+      - name: Sleep for 3 min and continue
+        wait_for:
+          timeout: 180

@@ -1,0 +1,37 @@
+---
+# tasks file for DeployJenkins
+- name: "Download repository files"
+  get_url: 
+    url: http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+    dest: /etc/yum.repos.d/jenkins.repo
+- rpm_key:
+    state: present
+    key: https://pkg.jenkins.io/redhat/jenkins.io.key
+- name: "Copy JDK 17 rpm"
+  copy:
+    src: jdk-21_linux-x64_bin.rpm
+    dest: /tmp/jdk-21_linux-x64_bin.rpm
+- name: "Install Packages"
+  yum:
+    name:
+      - /tmp/jdk-21_linux-x64_bin.rpm
+      - java-1.8.0-openjdk-devel
+      - jenkins
+    state: present
+    disable_gpg_check: yes
+- name: "Allow port 8080 in Firewall"
+  firewalld:
+   port: 8080/tcp
+   permanent: yes
+   immediate: yes
+   state: enabled
+- name: "Start and Enable jenkins service"
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+- name: "Get Unlock Password"
+  command: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: unlockpwd
+- name: "Print the password"
+  debug: msg="Jenkins Deployment Password is {{unlockpwd.stdout}}"

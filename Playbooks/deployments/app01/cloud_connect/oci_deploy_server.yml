@@ -1,0 +1,5 @@
+---
+  - name: "Deploy servers in OCI"
+    hosts: localhost
+    become: yes
+    

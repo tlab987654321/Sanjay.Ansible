@@ -1,0 +1,46 @@
+---
+  - name: "Deploy NodeJS Services"
+    hosts: reactapp
+    become: yes
+    tasks:
+      - name: "Extract nojejs core on remote server"
+        unarchive:
+          src: packages/node-v16.17.0-linux-x64.tar.xz
+          dest: /tmp
+          remote_src: no
+      - name: "Create application directory"
+        file:
+          path: /usr/local/nodejs
+          state: directory
+      - name: "Copy the files to application path"
+        copy:
+          src: /tmp/node-v16.17.0-linux-x64/
+          dest: /usr/local/nodejs
+          remote_src: True
+      #- name: "Remove the extracted directory"
+      #  file: 
+      #    path: /tmp/node-v16.17.0-linux-x64
+      #    state: absent
+      - name: "Add path for Root user"
+        lineinfile:
+          path: /etc/profile
+          insertafter: 'pathmunge /usr/local/sbin'
+          firstmatch: yes
+          line: "    pathmunge /usr/local/nodejs/bin"
+          state: present
+          backup: yes
+      - name: "Add path for Non-Root user"
+        lineinfile:
+          path: /etc/profile
+          insertafter: 'pathmunge /usr/sbin after'
+          line: "    pathmunge /usr/local/nodejs/bin after"
+          state: present
+      - name: "Reload the profile file"
+        shell: source /etc/profile
+      #- name: "Add NodeSource yum repository"
+      #  shell: curl -sL https://rpm.nodesource.com/setup_10.x | sudo bash -
+      #- name: "Install NodeJS Service"
+      #  yum:
+      #    name: 
+      #      - nodejs
+      #    state: present

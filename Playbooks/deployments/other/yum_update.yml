@@ -1,0 +1,22 @@
+---
+  - name: "Yum Update"
+    hosts: all
+    become: yes
+    tasks:
+      - name: "Update Packages on Remote Server"
+        yum: 
+          name: '*'
+          exclude: 
+            - ansible*
+            - grafana*
+            - mariadb*
+            - docker*
+            - jenkins*
+            - nagios*
+          state: latest
+      - name: "Check if Reboot is required"
+        shell: needs-restarting
+        register: reboot_required_file
+      - name: "Reboot the servers"
+        reboot:
+        when: reboot_required_file == true

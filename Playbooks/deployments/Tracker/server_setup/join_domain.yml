@@ -1,0 +1,40 @@
+---
+  - name: Setup new build server for use 
+    become: yes
+    vars_files:
+      - ~/Ansible/deployments/Tracker/vars.yml
+    vars:
+      server_name: "{{ NEWSERVERNAME }}"
+      ad_domain: "{{ DOMAIN }}"
+      ad_admin: "{{ USER }}"
+      ad_adm_pass: "{{ PASSWORD }}"
+      ad_dns_ip: "{{ DNS }}"
+    hosts: "{{ server_name }}"
+    tasks:
+      - name: Add DNS server IP
+        lineinfile:
+          path: /etc/resolv.conf
+          line: "nameserver {{ ad_dns_ip }}"
+          insertafter: "search"
+      - name: Install required packages
+        yum:
+          name:
+            - sssd
+            - realmd 
+            - oddjob 
+            - oddjob-mkhomedir 
+            - adcli 
+            - samba-common 
+            - samba-common-tools
+            - krb5-workstation
+            - openldap-clients
+            - python3-pip
+          state: present
+      - name: Install pexpect
+        pip:
+          name: pexpect
+      - name: join the server to AD
+        expect:
+          command: "realm join --user={{ ad_admin }} {{ ad_domain }}"
+          responses:
+            Password for.*: "{{ ad_adm_pass}}"

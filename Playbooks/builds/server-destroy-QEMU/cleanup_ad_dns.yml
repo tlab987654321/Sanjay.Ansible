@@ -1,0 +1,28 @@
+---
+  - name: Cleanup AD and DNS
+    hosts: addns
+    vars_files:
+      - vars.yml
+    vars:
+      server_name: "{{ NEWSERVERNAME }}"
+      ad_domain: "{{ DOMAIN }}"
+      server_ip: "{{ IPADDR }}"
+      ad_dns_ip: "{{ DNS }}"
+    tasks:
+      - name: Delete Computer in AD
+        win_domain_computer: 
+          dns_hostname : "{{ server_name }}.{{ ad_domain }}"
+          name: "{{ server_name }}"
+          state: absent
+      - name: Delete DNS entry A Record
+        win_dns_record:
+          name: "{{ server_name }}"
+          type: "A"
+          zone: "{{ ad_domain }}"
+          state: absent
+      - name: Delete DNS entry AAAA Record
+        win_dns_record:
+          name: "{{ server_name }}"
+          type: "AAAA"
+          zone: "{{ ad_domain }}"
+          state: absent

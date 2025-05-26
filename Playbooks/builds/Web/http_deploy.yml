@@ -1,0 +1,11 @@
+---
+  - name: "Deploy HTTP Services"
+    hosts: webserver
+    become: yes
+    tasks:
+      - name: "Install Web Service"
+        yum:
+          name: 
+            - yum
+            - php
+          state: present

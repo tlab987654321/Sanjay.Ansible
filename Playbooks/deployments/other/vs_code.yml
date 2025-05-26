@@ -1,0 +1,32 @@
+## Usage : ansible-playbook vs_code.yml --extra-vars "variable_host=<group/server>" ##
+---
+  - name: "Install VS Code Server"
+    hosts: "{{ variable_host | default('empty_group') }}"
+    ## Usage : ansible-playbook vs_code.yml --extra-vars "variable_host=<group/server>" ##
+    become: yes
+    tasks:
+      - name: "Create vscode Repository"
+        copy: 
+          dest: "/etc/yum.repos.d/vscode.repo"
+          content: |
+            [code]
+            name=Visual Studio Code
+            baseurl=https://packages.microsoft.com/yumrepos/vscode
+            enabled=1
+            gpgcheck=1
+            gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+      - name: "Import GPG Key"
+        rpm_key:
+          state: present
+          key: https://packages.microsoft.com/keys/microsoft.asc
+      - name: "Install VS Code Server"
+        dnf:
+          name: code
+          state: present
+      - name: "Create /app directory"
+        file:
+          path: /app
+          state: directory
+          mode: 0777
+      - name: "Start Code server"
+        command: code --user-data-dir /app

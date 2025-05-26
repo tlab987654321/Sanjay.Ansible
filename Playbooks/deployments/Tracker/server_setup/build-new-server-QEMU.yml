@@ -1,0 +1,5 @@
+- import_playbook : deploy_server.yml
+- import_playbook : configure_os.yml
+- import_playbook : configure_ansible.yml
+- import_playbook : join_domain.yml
+- import_playbook : post_build.yml

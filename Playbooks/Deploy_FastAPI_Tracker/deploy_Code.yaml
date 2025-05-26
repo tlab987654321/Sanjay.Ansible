@@ -1,0 +1,127 @@
+---
+- name: "Configure Docker for deploying the Application"
+  become: yes
+  hosts: server
+  gather_facts: no
+  vars: 
+    ansible_ssh_common_args: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+    #docker_compose_version: "v2.29.1"
+  tasks:
+    - name: Install pip3
+      yum:
+       name: python3-pip
+       state: present
+    - name: Install python module for docker
+      pip:
+       name: 
+          - docker
+          - docker_compose
+       state: latest
+    - name: "Create directory for Code Deploy"
+      become: yes
+      file:
+       path: "{{ item }}"
+       state: directory
+       mode: '0777'
+       #recursive: yes
+       owner: root
+       group: root
+      loop:
+        - /Application/Data
+        - /Application/Data/MongoDB/data
+        - /Application/Data/MongoDB/init
+        - /Application/Data/Logs/DB_Logs
+        - /Application/Data/Logs/App_Logs
+    - name: "Save the github fingerprint"
+      shell: "if ! grep github.com ~/.ssh/known_hosts > /dev/null ; then ssh-keyscan github.com >> ~/.ssh/known_hosts; fi"
+    - name: Copy SSH key to .access_key
+      copy:
+        content: "{{ access_key  }}"
+        dest: /Application/.access_key
+        mode: '0600'
+    - name: "Configuring authentication"
+      copy:
+       src: '../keys/id_rsa'
+       dest: /Application/.access_key
+       mode: '0600'
+    - name: "Allow user to run Dockerfile"
+      become: yes
+      user: 
+       name: '{{ansible_user}}'
+       groups: docker
+       append: yes
+    - name: "Clone the Code"
+      git:
+       repo: 'git@github.com:tlab987654321/Tracker_FastAPI.git'
+       dest: /Application/Data/AppData
+       key_file: /Application/.access_key
+       update: yes
+      environment:
+       GIT_TERMINAL_PROMPT: 0
+    - name: "Copy mongodb initial script"
+      copy:
+       src: 'Docker/init/init-script.js'
+       dest: "/Application/Data/MongoDB/init/"
+       mode: '0666'
+    - name: "Copy docker file"
+      copy:
+       src: '{{item}}'
+       dest: "/Application/Data"
+       mode: '0777'
+      loop:
+       - 'Docker/Dockerfile_app'
+       - 'Docker/Dockerfile_mdb'
+    #- name: "Copy docker file"
+    #  copy:
+    #   src: 'Docker/mongod.conf'
+    #   dest: "/Application/Data/MongoDB/"
+    #   mode: '0777'
+    - name: "Build Tracker image"
+      docker_image:
+       name: tracker
+       build:
+        dockerfile : /Application/Data/Dockerfile_app
+        path: /Application/Data
+       source: build
+    - name: "Build MongoDB image"
+      docker_image:
+       name: mymongodb
+       build:
+        dockerfile : /Application/Data/Dockerfile_mdb
+        path: /Application/Data
+       source: build
+    - name: "Build MongoDB and Python Container"
+      environment:
+        DOCKER_HOST: "unix:///var/run/docker.sock"
+      community.docker.docker_compose_v2:
+       project_name: tracker
+       definition:
+        #version: "3.9"
+        services:
+          mongodb:
+            #environment:
+            #  MONGODB_INITDB_ROOT_USERNAME: admin  # Root username
+            #  MONGODB_INITDB_ROOT_PASSWORD: password
+            #  INIT_DB_LOGPATH: /var/log/mongodb/mongod.log
+            image: mymongodb
+            volumes: 
+              #- "/Application/Data/MongoDB/data:/data/db"
+              #- "/Application/Data/MongoDB/conf/mongod.conf:/etc/mongod.conf"
+              - "/Application/Data/MongoDB/data:/data/"
+              - "/Application/Data/MongoDB/init:/docker-entrypoint-initdb.d"
+              - "/Application/Data/Logs/DB_Logs:/var/log/mongodb/"
+          tracker:
+            image: tracker
+            volumes:
+              - "/Application/Data/AppData:/Python/WebApps"
+              - "/Application/Data/Logs/App_Logs:/Python/WebApps/Logs"
+            ports:
+              - "8000:8000" 
+            depends_on:
+              - mongodb
+    - name: "Cleanup Dockerfile"
+      file:
+        name: 
+         - /Application/Data/Dockerfile_app
+         - /Application/Data/Dockerfile_mdb
+        state: absent

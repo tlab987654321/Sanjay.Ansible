@@ -1,6 +1,0 @@
----
-# defaults file for Deploy_AWS_EC2
-  aws_access_key: ""
-  aws_secret_key: ""
-  region: "us-east-1"
-  aws_profile: defaults

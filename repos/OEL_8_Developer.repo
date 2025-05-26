@@ -1,0 +1,13 @@
+[OEL_8_Developer]
+name=OEL 8 Developer Repo
+baseurl=http://yum.oracle.com/repo/OracleLinux/OL8/developer/x86_64
+enabled=1
+gpgcheck=0
+
+
+[OEL_8_Developer_EPEL]
+name=OEL 8 Developer EPEL Repo
+baseurl=http://yum.oracle.com/repo/OracleLinux/OL8/developer/EPEL/x86_64
+enabled=1
+gpgcheck=0
+

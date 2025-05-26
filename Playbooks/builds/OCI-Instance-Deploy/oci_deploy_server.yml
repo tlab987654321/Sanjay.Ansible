@@ -1,0 +1,14 @@
+---
+  - name: Configure OS
+    hosts: localhost
+    become: yes
+    vars_files:
+      - vars.yml
+    vars:
+      server_name: "{{ NEWSERVERNAME }}"
+      ad_domain: "{{ DOMAIN }}"
+      server_ip: "{{ IPADDR }}"
+      ad_dns_ip: "{{ DNS }}"
+      ansible_user: "{{ ANSIBLE_USER }}"
+    tasks:
+      - name: Add server to Ansible Inventory

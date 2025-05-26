@@ -1,0 +1,13 @@
+# - name: Sending an e-mail using Gmail SMTP servers
+#   mail:
+#     host: smtp.mailgun.org
+#     port: 587
+#     username: reminder@sandboxba8dbdc9c175434690fc19ea790bcbda.mailgun.org
+#     password: 08578ca2caa14e652115f799739a55a2-2bab6b06-ccbf79fe
+#     from: ansible@testlab.website
+#     to: tlab987654321@gmail.com
+#     subject: Ansible Report
+#     body: |
+#       System {{ ansible_hostname }} has been successfully provisioned.
+#       Token - {{ kibana_token.stdout }}
+#       Code: - {{ kibana_auth.stdout }}

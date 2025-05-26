@@ -1,0 +1,90 @@
+---
+  - name: "Setup DB"
+    hosts: dbserver
+    become: yes
+    vars_files:
+      - ../vars.yml
+    vars:
+      ansible_home: "{{ HOME }}"
+      app_name: "{{ ApplicationName }}"
+      mysql_root_password: "{{ ROOTPASSWORD }}"
+      mysql_service_account: "{{ SERVICEACCOUNT }}"
+      mysql_svcacc_password: "{{ SVCACCPASSWORD }}"
+      mysql_svc_user: "{{ SERVICEACCOUNT }}"
+      mysql_svc_pass: "{{ SVCACCPASSWORD }}"
+      mysql_db_name: "{{ DATABASE }}"
+      path: "{{ ansible_home }}{{ app_name }}"
+    tasks:
+      - name: "Create Database {{ mysql_db_name }} for Application"
+        mysql_db: 
+          name: "{{ mysql_db_name }}" 
+          state: present 
+          login_user: root 
+          login_password: "{{ mysql_root_password }}"
+      - name: Copy DB Tables export file on the the server
+        copy:
+          src: "{{ path }}/db_setup/{{ item }}"
+          dest: /tmp/
+        loop: 
+          - table_users.sql
+          - table_events.sql
+          - table_token.sql
+          - table_settings.sql
+          - view_OTP.sql
+          - add_remote_access.sql
+      - name: Update Remote Access user info
+        shell: |
+          sed -i 's/REMOTEUSER/{{ mysql_svc_user }}/g' /tmp/add_remote_access.sql;
+          sed -i 's/REMUSERPASS/{{ mysql_svc_pass }}/g' /tmp/add_remote_access.sql
+          sed -i 's/REMOTEUSER/{{ mysql_svc_user }}/g' /tmp/view_OTP.sql;
+      - name: Create service account for Application access
+        mysql_db:
+          name: mysql
+          state: import
+          target:  /tmp/add_remote_access.sql
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+      - name: Create the Users Table in the Database
+        mysql_db:
+          name: "{{ mysql_db_name }}" 
+          state: import
+          target:  /tmp/table_users.sql
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+      - name: Create the Token Table in the Database
+        mysql_db:
+          name: "{{ mysql_db_name }}" 
+          state: import
+          target:  /tmp/table_token.sql
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+      - name: Create the Reminder Table in the Database
+        mysql_db:
+          name: "{{ mysql_db_name }}" 
+          state: import
+          target:  /tmp/table_events.sql
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+      - name: Create the Settings Table in the Database
+        mysql_db:
+          name: "{{ mysql_db_name }}" 
+          state: import
+          target:  /tmp/table_settings.sql
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+      - name: Create the OTP View in the Database
+        mysql_db:
+          name: "{{ mysql_db_name }}" 
+          state: import
+          target:  /tmp/view_OTP.sql
+          login_user: root
+          login_password: "{{ mysql_root_password }}"
+      - name: Remove the sql files on remote server
+        file:
+          dest: /tmp/{{ item }}
+          state: absent
+        loop: 
+          - table_users.sql
+          - table_events.sql
+          - table_token.sql
+          - add_remote_access.sql
