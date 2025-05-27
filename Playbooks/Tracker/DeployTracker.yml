@@ -30,4 +30,9 @@
       project_src: /Docker
       build: always
       state: present
-      recreate: always
+
+  - name: Restart the App container
+    community.docker:
+      name: expense_tracker_app
+      state: restarted
+

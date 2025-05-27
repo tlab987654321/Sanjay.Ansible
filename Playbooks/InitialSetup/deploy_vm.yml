@@ -1,0 +1,51 @@
+---
+- name: Deploy a virtual machine with automated ISO installation
+  hosts: localhost
+  become: true
+  vars:
+    vm_name: "demo-vm"
+    vm_memory_mb: 2048
+    vm_vcpus: 2
+    vm_disk_size_gb: 20
+    vm_iso_path: "/ISO/CentOS-Stream-9-latest-x86_64-dvd1.iso"
+    vm_disk_path: "/var/lib/libvirt/images/{{ vm_name }}.qcow2"
+    vm_bridge: "br0"
+    vm_autoinstall_cfg: "/var/lib/libvirt/images/{{ vm_name }}-ks.cfg"  # Kickstart or preseed file
+
+  tasks:
+
+    - name: Create disk image for VM
+      command: >
+        qemu-img create -f qcow2 {{ vm_disk_path }} {{ vm_disk_size_gb }}G
+      args:
+        creates: "{{ vm_disk_path }}"
+
+    - name: Ensure libvirt service is running
+      service:
+        name: libvirtd
+        state: started
+        enabled: yes
+
+    - name: Define and start VM
+      command: >
+        virt-install
+        --name {{ vm_name }}
+        --ram {{ vm_memory_mb }}
+        --vcpus {{ vm_vcpus }}
+        --os-type linux
+        --os-variant centos-stream9
+        --hvm
+        --disk path={{ vm_disk_path }},format=qcow2,bus=virtio
+        --cdrom {{ vm_iso_path }}
+        --network bridge={{ vm_bridge }},model=virtio
+        --graphics none
+        --console pty,target_type=serial
+        --extra-args "inst.ks=file:/ks.cfg console=ttyS0"
+        --initrd-inject={{ vm_autoinstall_cfg }}
+        --noautoconsole
+      args:
+        creates: "/etc/libvirt/qemu/{{ vm_name }}.xml"
+
+    - name: Output VM creation status
+      debug:
+        msg: "VM {{ vm_name }} created and installation started."
