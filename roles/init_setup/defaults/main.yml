@@ -23,7 +23,7 @@ required_packages:
   - podman
   - qemu-kvm
   - libvirt
-  - bridge-utils
+  # - bridge-utils
   - NetworkManager
   - vim
 IP_address: 192.168.0.20

@@ -1,0 +1,6 @@
+---
+- name: Perform Initial Setup of PC.
+  hosts: localhost
+  become: true
+  roles:
+    - init_setup
