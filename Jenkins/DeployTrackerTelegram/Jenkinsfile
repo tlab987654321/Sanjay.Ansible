@@ -20,7 +20,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'dev', url: "${env.REPO_URL}"
+                sshagent(['tlab987654321_Private_Key_SSH']){
+                    git branch: 'dev', url: "${env.REPO_URL}"
+                }
             }
         }
 
@@ -57,18 +59,19 @@ pipeline {
                 script {
                     def version = "v1.0.${env.BUILD_NUMBER}"
                     echo "Merging dev → prod and tagging ${version}"
-
-                    sh """
-                        git config --global user.email "jenkins@sanjay-lab.local"
-                        git config --global user.name "Jenkins"
-                        git checkout prod
-                        git merge origin/dev -m 'Auto-merge dev to prod [${version}]'
-                        echo ${version} > ${VERSION_FILE}
-                        git add ${VERSION_FILE}
-                        git commit -m "Version bump: ${version}"
-                        git tag ${version}
-                        git push origin prod --tags
-                    """
+                    sshagent(['tlab987654321_Private_Key_SSH']){
+                        sh """
+                            git config --global user.email "jenkins@sanjay-lab.local"
+                            git config --global user.name "Jenkins"
+                            git checkout prod
+                            git merge origin/dev -m 'Auto-merge dev to prod [${version}]'
+                            echo ${version} > ${VERSION_FILE}
+                            git add ${VERSION_FILE}
+                            git commit -m "Version bump: ${version}"
+                            git tag ${version}
+                            git push origin prod --tags
+                        """
+                    }
                 }
             }
         }
