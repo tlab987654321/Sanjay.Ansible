@@ -1,0 +1,8 @@
+tracker:
+  hosts:
+    lab-docker01:
+      ansible_host:
+        140.245.228.216
+      ansible_user: rocky
+      ansible_gather_facts: false
+#lab-docker01	ansible_host=140.245.228.216	ansible_user=rocky	ansible_python_interpreter=/usr/bin/python3
