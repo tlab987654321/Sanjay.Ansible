@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'git@github.com:tlab987654321/Tracker_Telegram.git'
+        #REPO_URL = 'git@github.com:tlab987654321/Tracker_Telegram.git'
+        REPO_URL = 'https://github.com/tlab987654321/Tracker_Telegram.git'
         VERSION_FILE = 'VERSION.txt'
         PLAYBOOK_PATH = '/Ansible/Code/Playbooks/Tracker/main.yml'
         INVENTORY_DEV = '/Ansible/Code/Playbooks/Tracker/inventory/dev/main.yml'
@@ -20,9 +21,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                sshagent(['tlab987654321_Private_Key_SSH']){
+                // sshagent(['tlab987654321_Private_Key_SSH']){
                     git branch: 'dev', url: "${env.REPO_URL}"
-                }
+                // }
             }
         }
 
@@ -59,7 +60,7 @@ pipeline {
                 script {
                     def version = "v1.0.${env.BUILD_NUMBER}"
                     echo "Merging dev → prod and tagging ${version}"
-                    sshagent(['tlab987654321_Private_Key_SSH']){
+                    // sshagent(['tlab987654321_Private_Key_SSH']){
                         sh """
                             git config --global user.email "jenkins@sanjay-lab.local"
                             git config --global user.name "Jenkins"
@@ -71,7 +72,7 @@ pipeline {
                             git tag ${version}
                             git push origin prod --tags
                         """
-                    }
+                    // }
                 }
             }
         }
