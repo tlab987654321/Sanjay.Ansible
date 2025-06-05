@@ -1,0 +1,126 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'git@github.com:tlab987654321/Tracker_Telegram.git'
+        VERSION_FILE = 'VERSION.txt'
+        PLAYBOOK_PATH = '/Ansible/Code/Playbooks/Tracker/main.yml'
+        INVENTORY_DEV = '/Ansible/Code/Playbooks/Tracker/inventory/dev/main.yml'
+        INVENTORY_PROD = '/Ansible/Code/Playbooks/Tracker/inventory/prod/main.yml'
+        // TEAMS_WEBHOOK = credentials('TEAMS_WEBHOOK')
+        TELEGRAM_TOKEN = credentials('TELEGRAM_TOKEN_DEV')
+        TELEGRAM_CHAT_ID = credentials('TELEGRAM_CHAT_ID')
+        EMAIL_RECIPIENT = 'thrinadsanjay@gmail.com'
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'dev', url: "${env.REPO_URL}"
+            }
+        }
+
+        stage('Deploy to Dev') {
+            steps {
+                echo "Deploying to Dev environment..."
+                sh "ansible-playbook ${PLAYBOOK_PATH} -i ${INVENTORY_DEV}"
+            }
+        }
+
+        stage('Notify for Approval') {
+            steps {
+                script {
+                    def msg = "✅ *Dev deployment completed*.\n\nPlease approve production release in Jenkins."
+                    notifyTeams(msg)
+                    notifyTelegram(msg)
+                    mail to: EMAIL_RECIPIENT,
+                         subject: "Approval Required: Deploy to Production",
+                         body: msg
+                }
+            }
+        }
+
+        stage('Approval to Release to Prod') {
+            steps {
+                timeout(time: 2, unit: 'HOURS') {
+                    input message: 'Deploy to Production?', ok: 'Approve'
+                }
+            }
+        }
+
+        stage('Merge to Prod and Tag') {
+            steps {
+                script {
+                    def version = "v1.0.${env.BUILD_NUMBER}"
+                    echo "Merging dev → prod and tagging ${version}"
+
+                    sh """
+                        git config --global user.email "jenkins@sanjay-lab.local"
+                        git config --global user.name "Jenkins"
+                        git checkout prod
+                        git merge origin/dev -m 'Auto-merge dev to prod [${version}]'
+                        echo ${version} > ${VERSION_FILE}
+                        git add ${VERSION_FILE}
+                        git commit -m "Version bump: ${version}"
+                        git tag ${version}
+                        git push origin prod --tags
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Prod') {
+            steps {
+                echo "Deploying to Production environment..."
+                sh "ansible-playbook ${PLAYBOOK_PATH} -i ${INVENTORY_PROD}"
+            }
+        }
+
+        stage('Notify Success') {
+            steps {
+                script {
+                    def msg = "🚀 *Production deployment complete!*\n\nVersion: `v1.0.${env.BUILD_NUMBER}`"
+                    notifyTeams(msg)
+                    notifyTelegram(msg)
+                    mail to: EMAIL_RECIPIENT,
+                         subject: "Production Deployed: v1.0.${env.BUILD_NUMBER}",
+                         body: msg
+                }
+            }
+        }
+    }
+}
+
+// =====================
+// Notification Functions
+// =====================
+
+// def notifyTeams(String message) {
+//     httpRequest httpMode: 'POST',
+//         contentType: 'APPLICATION_JSON',
+//         url: "${env.TEAMS_WEBHOOK}",
+//         requestBody: """{
+//             "@type": "MessageCard",
+//             "@context": "http://schema.org/extensions",
+//             "summary": "Jenkins CI/CD",
+//             "themeColor": "0076D7",
+//             "title": "CI/CD Notification",
+//             "text": "${message.replaceAll('"', '\\"')}"
+//         }"""
+// }
+
+def notifyTelegram(String message) {
+    def apiUrl = "https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage"
+    httpRequest httpMode: 'POST',
+        contentType: 'APPLICATION_JSON',
+        url: apiUrl,
+        requestBody: """{
+            "chat_id": "${env.TELEGRAM_CHAT_ID}",
+            "text": "${message}",
+            "parse_mode": "Markdown"
+        }"""
+}
