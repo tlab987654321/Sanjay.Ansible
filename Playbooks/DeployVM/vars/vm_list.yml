@@ -1,0 +1,16 @@
+NETMASK: 255.255.255.0
+GATEWAY: 192.168.0.1
+NS: 8.8.8.8 
+
+vm_list:
+  - name: lab-test01
+    ip_last_octet: 51
+    memory: 2048
+    vcpus: 2
+    disk_size: 50
+
+  # - name: lab-test02
+  #   ip_last_octet: 52
+  #   memory: 2048
+  #   vcpus: 2
+  #   disk_size: 50

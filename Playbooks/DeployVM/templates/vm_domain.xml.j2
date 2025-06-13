@@ -1,0 +1,36 @@
+<domain type='kvm'>
+  <name>{{ vm.name }}</name>
+  <memory unit='MiB'>{{ vm.memory }}</memory>
+  <vcpu>{{ vm.vcpus }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc'>hvm</type>
+    <boot dev='cdrom'/>
+    <boot dev='hd'/>
+    <kernel>/var/lib/libvirt/boot/vmlinuz</kernel>
+    <initrd>/var/lib/libvirt/boot/initrd.img</initrd>
+    <cmdline>inst.ks={{ ks_base_url }}/ks.cfg ip={{ vm.ipaddr }} netmask={{NETMASK}} gateway={{GATEWAY}} nameserver={{NS}}</cmdline>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <devices>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/{{ vm.name }}.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='{{ iso_path }}'/>
+      <target dev='hdb' bus='ide'/>
+      <readonly/>
+    </disk>
+    <interface type='bridge'>
+      <source bridge='{{ bridge_name }}'/>
+      <model type='virtio'/>
+    </interface>
+    <graphics type='vnc' port='-1'/>
+    <console type='pty'/>
+  </devices>
+</domain>

@@ -1,0 +1,50 @@
+---
+- name: Deploy multiple VMs using virt-install with init-ks.cfg
+  hosts: localhost
+  become: true
+  vars_files:
+    - vars/vm_list.yml
+
+  vars:
+    kickstart_mode: "http"   # Options: "http" or "local"
+    kickstart_url_http: "http://152.67.191.181/init-ks.cfg"
+    kickstart_url_local: "file:/root/.init-ks.cfg"
+    iso_path: "/ISO/OracleLinux-R9-U2-x86_64-dvd.iso"
+
+  tasks:
+
+    - name: Set kickstart URL based on mode
+      set_fact:
+        kickstart_url: "{{ kickstart_url_http if kickstart_mode == 'http' else kickstart_url_local }}"
+
+    - name: Ensure image directory exists
+      file:
+        path: /var/lib/libvirt/images
+        state: directory
+        mode: '0755'
+
+    - name: Deploy VMs with virt-install
+      ansible.builtin.command: >
+        virt-install
+        --name {{ item.name }}
+        --ram {{ item.memory }} 
+        --vcpus {{ item.vcpus }}
+        --disk size=50,path=/var/lib/libvirt/images/{{ item.name }}.qcow2,format=qcow2
+        --os-variant ol9.2
+        --network bridge=br0
+        --graphics none
+        --location {{ iso_path }}
+        --initrd-inject=init-ks.cfg
+        --extra-args "inst.ks={{ kickstart_url }}
+                       IPADDR=192.168.0.{{ item.ip_last_octet }}
+                       HOSTNAME={{ item.name }}
+                       NETMASK={{ NETMASK }}
+                       GATEWAY={{ GATEWAY }}
+                       NS={{ NS }}
+                       console=ttyS0"
+      # console=ttyS0"
+      loop: "{{ vm_list }}"
+      async: 0
+      poll: 0  # Runs in background
+      environment:
+        LIBVIRT_DEFAULT_URI: "qemu:///system"
