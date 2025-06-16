@@ -2,6 +2,7 @@
 # Installing Ansible and Git on the Device
 echo "Installing Ansible and Git"
 sudo yum install ansible* git -y
+mkdir -m 700 .ssh
 
 # Add the git hub key to known Hosts
 ssh-keyscan -H github.com >> /home/sanjay/.ssh/known_hosts
