@@ -1,0 +1,8 @@
+<Files "vars.cfg">
+    # Allow requests with User-Agent starting with Anaconda (used by RHEL installer)
+    SetEnvIfNoCase User-Agent "^Anaconda" allow_access
+
+    Order Deny,Allow
+    Deny from all
+    Allow from env=allow_access
+</Files>
